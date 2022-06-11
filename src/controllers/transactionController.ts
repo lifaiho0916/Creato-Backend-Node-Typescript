@@ -34,6 +34,7 @@ export const getTransactions = async (req: Request, res: Response) => {
         if (Number(type) === 1)
             transactions = await AdminUserTransaction.find({ $or: [{ from: 'USER' }, { to: 'USER' }, { description: 3 }] })
                 .populate({ path: 'user' }).populate({ path: 'dareme' });
+                
         return res.status(200).json({
             success: true,
             users: resUsers,
