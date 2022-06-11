@@ -25,6 +25,9 @@ const AdminUserTransaction = new mongoose.Schema({
         type: Schema.Types.ObjectId,
         ref: FundMe
     },
+    title: {
+        type: String
+    },
     donuts: {
         type: Number
     },
