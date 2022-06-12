@@ -7,8 +7,9 @@ import User from "../models/User";
 import Option from "../models/Option";
 import Fanwall from "../models/Fanwall";
 import AdminWallet from "../models/AdminWallet";
-import Notification from "../models/Notification";
+// import Notification from "../models/Notification";
 import AdminUserTransaction from "../models/AdminUserTransaction";
+import FundMe from "../models/FundMe";
 
 function calcTime() {
     var d = new Date();
@@ -92,36 +93,36 @@ export const publishDareme = async (req: Request, res: Response) => {
         const dareme = await DareMe.findOne({ owner: userId, published: false });
         const updatedDareme = await DareMe.findByIdAndUpdate(dareme._id, { published: true, date: calcTime() }, { new: true });
 
-        const admins = await User.find({ role: 'ADMIN' });
-        let new_notification = new Notification({
-            sender: admins[0],
-            receivers: [userId],
-            message: `<strong>"${dareme.title}"</strong> is now live! Share on socials & get your fans to join.`,
-            theme: 'Congrats',
-            dareme: updatedDareme._id,
-            type: "create_dareme",
-        });
+        // const admins = await User.find({ role: 'ADMIN' });
+        // let new_notification = new Notification({
+        //     sender: admins[0],
+        //     receivers: [userId],
+        //     message: `<strong>"${dareme.title}"</strong> is now live! Share on socials & get your fans to join.`,
+        //     theme: 'Congrats',
+        //     dareme: updatedDareme._id,
+        //     type: "create_dareme",
+        // });
 
-        await User.findOneAndUpdate({ _id: userId }, { new_notification: true });
-        await new_notification.save();
+        // await User.findOneAndUpdate({ _id: userId }, { new_notification: true });
+        // await new_notification.save();
 
-        const user = await User.findOne({ _id: userId }).populate({ path: 'subscribed_users' });
-        if (user.subscribed_users.length) {
-            new_notification = new Notification({
-                sender: userId,
-                receivers: user.subscribed_users.map((sub_user: any) => sub_user._id),
-                message: `<strong>"${user.name}"</strong> created <strong>"${dareme.title}"</strong>, go Dare & support him now!`,
-                theme: 'A new DareMe',
-                dareme: updatedDareme._id,
-                type: "create_dareme",
-            })
-            await new_notification.save();
-            user.subscribed_users.forEach(async (sub_user: any) => {
-                await User.findByIdAndUpdate(sub_user._id, { new_notification: true });
-                req.body.io.to(sub_user.email).emit("create_notification");
-            });
-        }
-        req.body.io.to(user.email).emit("create_notification");
+        // const user = await User.findOne({ _id: userId }).populate({ path: 'subscribed_users' });
+        // if (user.subscribed_users.length) {
+        //     new_notification = new Notification({
+        //         sender: userId,
+        //         receivers: user.subscribed_users.map((sub_user: any) => sub_user._id),
+        //         message: `<strong>"${user.name}"</strong> created <strong>"${dareme.title}"</strong>, go Dare & support him now!`,
+        //         theme: 'A new DareMe',
+        //         dareme: updatedDareme._id,
+        //         type: "create_dareme",
+        //     })
+        //     await new_notification.save();
+        //     user.subscribed_users.forEach(async (sub_user: any) => {
+        //         await User.findByIdAndUpdate(sub_user._id, { new_notification: true });
+        //         req.body.io.to(sub_user.email).emit("create_notification");
+        //     });
+        // }
+        // req.body.io.to(user.email).emit("create_notification");
         return res.status(200).json({ success: true });
     } catch (err) {
         console.log(err)
@@ -296,19 +297,23 @@ export const deleteDareme = async (req: Request, res: Response) => {
 export const getDaremesByPersonalUrl = async (req: Request, res: Response) => {
     try {
         const { url } = req.body;
-        const resultDaremes: Array<object> = [];
+        let results: Array<object> = [];
         const user = await User.findOne({ personalisedUrl: url }).select({ 'name': 1, 'avatar': 1, 'personalisedUrl': 1, 'categories': 1, 'subscribed_users': 1 });
         const userDaremes = await DareMe.find({ owner: user._id, published: true, show: true })
             .populate({ path: 'owner', select: { 'name': 1, 'avatar': 1, 'personalisedUrl': 1, 'status': 1 } })
             .populate({ path: 'options.option', select: { 'donuts': 1, '_id': 0, 'status': 1 } })
             .select({ 'published': 0, 'wallet': 0, '__v': 0 });
+        const userFundmes = await FundMe.find({ owner: user._id, published: true, show: true })
+            .populate({ path: 'owner', select: { 'name': 1, 'avatar': 1, 'personalisedUrl': 1, 'status': 1 } })
+            .select({ 'published': 0, '__v': 0 });
 
-        userDaremes.filter((userDareme: any) => userDareme.finished === false).sort((first: any, second: any) => {
-            return new Date(first.date).getTime() > new Date(second.date).getTime() ? 1 : new Date(first.date).getTime() < new Date(second.date).getTime() ? -1 : 0;
-        }).forEach((dareme: any) => {
+        const ongoings: Array<object> = [];
+        const finishes: Array<object> = [];
+
+        userDaremes.filter((userDareme: any) => userDareme.finished === false).forEach((dareme: any) => {
             let donuts = 0;
             dareme.options.forEach((option: any) => { if (option.option.status === 1) donuts += option.option.donuts; });
-            resultDaremes.push({
+            ongoings.push({
                 _id: dareme._id,
                 owner: dareme.owner,
                 title: dareme.title,
@@ -318,18 +323,36 @@ export const getDaremesByPersonalUrl = async (req: Request, res: Response) => {
                 donuts: donuts,
                 cover: dareme.cover,
                 sizeType: dareme.sizeType,
-                isUserdareme: true,
+                isUser: true,
                 finished: dareme.finished,
                 time: (new Date(dareme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * dareme.deadline) / (24 * 3600 * 1000),
+                date: dareme.date
             });
         });
 
-        userDaremes.filter((userDareme: any) => userDareme.finished === true).sort((first: any, second: any) => {
-            return new Date(first.date).getTime() > new Date(second.date).getTime() ? 1 : new Date(first.date).getTime() < new Date(second.date).getTime() ? -1 : 0;
-        }).forEach((dareme: any) => {
+        userFundmes.filter((userFundme: any) => userFundme.finished === false).forEach((fundme: any) => {
+            ongoings.push({
+                _id: fundme._id,
+                owner: fundme.owner,
+                title: fundme.title,
+                deadline: fundme.deadline,
+                category: fundme.category,
+                teaser: fundme.teaser,
+                donuts: fundme.wallet,
+                goal: fundme.goal,
+                cover: fundme.cover,
+                sizeType: fundme.sizeType,
+                isUser: true,
+                finished: fundme.finished,
+                time: (new Date(fundme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * fundme.deadline) / (24 * 3600 * 1000),
+                date: fundme.date
+            });
+        });
+
+        userDaremes.filter((userDareme: any) => userDareme.finished === true).forEach((dareme: any) => {
             let donuts = 0;
             dareme.options.forEach((option: any) => { if (option.option.status === 1) donuts += option.option.donuts; });
-            resultDaremes.push({
+            finishes.push({
                 _id: dareme._id,
                 owner: dareme.owner,
                 title: dareme.title,
@@ -339,11 +362,35 @@ export const getDaremesByPersonalUrl = async (req: Request, res: Response) => {
                 donuts: donuts,
                 cover: dareme.cover,
                 sizeType: dareme.sizeType,
-                isUserdareme: true,
+                isUser: true,
                 finished: dareme.finished,
                 time: (new Date(dareme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * dareme.deadline) / (24 * 3600 * 1000),
+                date: dareme.date
             });
         });
+
+        userFundmes.filter((userFundme: any) => userFundme.finished === true).forEach((fundme: any) => {
+            finishes.push({
+                _id: fundme._id,
+                owner: fundme.owner,
+                title: fundme.title,
+                deadline: fundme.deadline,
+                category: fundme.category,
+                teaser: fundme.teaser,
+                donuts: fundme.wallet,
+                goal: fundme.goal,
+                cover: fundme.cover,
+                sizeType: fundme.sizeType,
+                isUser: true,
+                finished: fundme.finished,
+                time: (new Date(fundme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * fundme.deadline) / (24 * 3600 * 1000),
+                date: fundme.date
+            });
+        });
+
+        ongoings.sort((first: any, second: any) => { return new Date(first.date).getTime() > new Date(second.date).getTime() ? 1 : new Date(first.date).getTime() < new Date(second.date).getTime() ? -1 : 0; });
+        finishes.sort((first: any, second: any) => { return new Date(first.date).getTime() > new Date(second.date).getTime() ? 1 : new Date(first.date).getTime() < new Date(second.date).getTime() ? -1 : 0; });
+        results = ongoings.concat(finishes);
 
         const daredDaremes = await DareMe.find({ published: true, show: true })
             .where('owner').ne(user._id)
@@ -371,7 +418,7 @@ export const getDaremesByPersonalUrl = async (req: Request, res: Response) => {
             if (isWriter === true) {
                 let donuts = 0;
                 dareme.options.forEach((option: any) => { if (option.option.status === 1) donuts += option.option.donuts; });
-                resultDaremes.push({
+                results.push({
                     _id: dareme._id,
                     owner: dareme.owner,
                     title: dareme.title,
@@ -382,8 +429,9 @@ export const getDaremesByPersonalUrl = async (req: Request, res: Response) => {
                     cover: dareme.cover,
                     sizeType: dareme.sizeType,
                     finished: dareme.finished,
-                    isUserdareme: false,
+                    isUser: false,
                     time: (new Date(dareme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * dareme.deadline + 1000 * 60) / (24 * 3600 * 1000),
+                    date: dareme.date
                 });
             }
         });
@@ -408,7 +456,7 @@ export const getDaremesByPersonalUrl = async (req: Request, res: Response) => {
             if (isWriter === true) {
                 let donuts = 0;
                 dareme.options.forEach((option: any) => { if (option.option.status === 1) donuts += option.option.donuts; });
-                resultDaremes.push({
+                results.push({
                     _id: dareme._id,
                     owner: dareme.owner,
                     title: dareme.title,
@@ -419,12 +467,14 @@ export const getDaremesByPersonalUrl = async (req: Request, res: Response) => {
                     cover: dareme.cover,
                     sizeType: dareme.sizeType,
                     finished: dareme.finished,
-                    isUserdareme: false,
+                    isUser: false,
                     time: (new Date(dareme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * dareme.deadline + 1000 * 60) / (24 * 3600 * 1000),
+                    date: dareme.date
                 });
             }
         });
-        return res.status(200).json({ daremes: resultDaremes, user: user });
+
+        return res.status(200).json({ daremes: results, user: user });
     } catch (err) {
         console.log(err);
     }
@@ -689,16 +739,16 @@ export const supportCreator = async (req: Request, res: Response) => {
         }
 
         //create notification
-        let new_notification = new Notification({
-            sender: userId,
-            receivers: [dareme.owner],
-            message: `<strong>"${user.name}"</strong> supported <strong>"${option.title}"</strong> with ${amount} Donuts.`,
-            them: "new vote",
-            type: "ongoing_dareme",
-            dareme: dareme._id,
-        });
-        await new_notification.save();
-        req.body.io.to(dareme.owner.email).emit("create_notification");
+        // let new_notification = new Notification({
+        //     sender: userId,
+        //     receivers: [dareme.owner],
+        //     message: `<strong>"${user.name}"</strong> supported <strong>"${option.title}"</strong> with ${amount} Donuts.`,
+        //     them: "new vote",
+        //     type: "ongoing_dareme",
+        //     dareme: dareme._id,
+        // });
+        // await new_notification.save();
+        // req.body.io.to(dareme.owner.email).emit("create_notification");
         //end
     } catch (err) {
         console.log(err);
@@ -762,16 +812,16 @@ export const dareCreator = async (req: Request, res: Response) => {
     });
     await transaction.save();
     //new notification
-    const new_notification = new Notification({
-        sender: userId,
-        receivers: [dareme.owner],
-        message: `<strong>"${user.name}"</strong> dared you in <strong>"${dareme.title}"</strong>, check it out.`,
-        theme: "New proposed Dare",
-        dareme: daremeId,
-        type: "ongoing_dareme"
-    })
-    await new_notification.save();
-    req.body.io.to(dareme.owner.email).emit("create_notification");
+    // const new_notification = new Notification({
+    //     sender: userId,
+    //     receivers: [dareme.owner],
+    //     message: `<strong>"${user.name}"</strong> dared you in <strong>"${dareme.title}"</strong>, check it out.`,
+    //     theme: "New proposed Dare",
+    //     dareme: daremeId,
+    //     type: "ongoing_dareme"
+    // })
+    // await new_notification.save();
+    // req.body.io.to(dareme.owner.email).emit("create_notification");
     //end
 
     return res.status(200).json({ success: true, option: option, user: payload });

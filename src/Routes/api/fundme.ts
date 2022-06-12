@@ -6,7 +6,7 @@ import auth from "../../middleware/auth";
 import {
     getDraftFundme,
     // uploadFile,
-    // publishFundme,
+    publishFundme,
     // getfundmesByPersonalUrl,
     // getFundmesOngoing,
     saveFundme,
@@ -35,7 +35,7 @@ import {
 router.post("/draft", auth, getDraftFundme);
 router.post("/save", auth, saveFundme);
 // router.post('/save/upload', auth, uploadFile);
-// router.post('/publish', auth, publishFundme);
+router.post('/publish', auth, publishFundme);
 router.get('/delete/:fundmeId', auth, deleteFundme);
 // router.post('/save/cover', auth, selectCover);
 

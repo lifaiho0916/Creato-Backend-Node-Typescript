@@ -10,12 +10,12 @@ import FundMe from "../models/FundMe";
 // import Notification from "../models/Notification";
 // import AdminUserTransaction from "../models/AdminUserTransaction";
 
-// function calcTime() {
-//     var d = new Date();
-//     var utc = d.getTime();
-//     var nd = new Date(utc + (3600000 * 8));
-//     return nd;
-// }
+function calcTime() {
+    var d = new Date();
+    var utc = d.getTime();
+    var nd = new Date(utc + (3600000 * 8));
+    return nd;
+}
 
 export const getDraftFundme = (req: Request, res: Response) => {
     const { userId } = req.body;
@@ -92,6 +92,48 @@ export const deleteFundme = async (req: Request, res: Response) => {
     }
 }
 
+export const publishFundme = async (req: Request, res: Response) => {
+    try {
+        const { userId } = req.body;
+        const fundme = await FundMe.findOne({ owner: userId, published: false });
+        const updatedFundme = await FundMe.findByIdAndUpdate(fundme._id, { published: true, date: calcTime() }, { new: true });
+
+        // const admins = await User.find({ role: 'ADMIN' });
+        // let new_notification = new Notification({
+        //     sender: admins[0],
+        //     receivers: [userId],
+        //     message: `<strong>"${fundme.title}"</strong> is now live! Share on socials & get your fans to join.`,
+        //     theme: 'Congrats',
+        //     fundme: updatedFundme._id,
+        //     type: "create_fundme",
+        // });
+
+        // await User.findOneAndUpdate({ _id: userId }, { new_notification: true });
+        // await new_notification.save();
+
+        // const user = await User.findOne({ _id: userId }).populate({ path: 'subscribed_users' });
+        // if (user.subscribed_users.length) {
+        //     new_notification = new Notification({
+        //         sender: userId,
+        //         receivers: user.subscribed_users.map((sub_user: any) => sub_user._id),
+        //         message: `<strong>"${user.name}"</strong> created <strong>"${fundme.title}"</strong>, go Fund & support him now!`,
+        //         theme: 'A new FundMe',
+        //         fundme: updatedFundme._id,
+        //         type: "create_fundme",
+        //     })
+        //     await new_notification.save();
+        //     user.subscribed_users.forEach(async (sub_user: any) => {
+        //         await User.findByIdAndUpdate(sub_user._id, { new_notification: true });
+        //         req.body.io.to(sub_user.email).emit("create_notification");
+        //     });
+        // }
+        // req.body.io.to(user.email).emit("create_notification");
+        return res.status(200).json({ success: true });
+    } catch (err) {
+        console.log(err)
+    }
+}
+
 // export const checkOngoingfundmes = async (io: any) => {
 //     try {
 //         const fundmes = await FundMe.find({ published: true }).where('finished').equals(false).populate({ path: 'options.option', model: Option });
@@ -158,48 +200,6 @@ export const deleteFundme = async (req: Request, res: Response) => {
 //         }
 //     } catch (err: any) {
 //         console.log(err);
-//     }
-// }
-
-// export const publishFundme = async (req: Request, res: Response) => {
-//     try {
-//         const { userId } = req.body;
-//         const fundme = await FundMe.findOne({ owner: userId, published: false });
-//         const updatedFundme = await FundMe.findByIdAndUpdate(fundme._id, { published: true, date: calcTime() }, { new: true });
-
-//         const admins = await User.find({ role: 'ADMIN' });
-//         let new_notification = new Notification({
-//             sender: admins[0],
-//             receivers: [userId],
-//             message: `<strong>"${fundme.title}"</strong> is now live! Share on socials & get your fans to join.`,
-//             theme: 'Congrats',
-//             fundme: updatedFundme._id,
-//             type: "create_fundme",
-//         });
-
-//         await User.findOneAndUpdate({ _id: userId }, { new_notification: true });
-//         await new_notification.save();
-
-//         const user = await User.findOne({ _id: userId }).populate({ path: 'subscribed_users' });
-//         if (user.subscribed_users.length) {
-//             new_notification = new Notification({
-//                 sender: userId,
-//                 receivers: user.subscribed_users.map((sub_user: any) => sub_user._id),
-//                 message: `<strong>"${user.name}"</strong> created <strong>"${fundme.title}"</strong>, go Fund & support him now!`,
-//                 theme: 'A new FundMe',
-//                 fundme: updatedFundme._id,
-//                 type: "create_fundme",
-//             })
-//             await new_notification.save();
-//             user.subscribed_users.forEach(async (sub_user: any) => {
-//                 await User.findByIdAndUpdate(sub_user._id, { new_notification: true });
-//                 req.body.io.to(sub_user.email).emit("create_notification");
-//             });
-//         }
-//         req.body.io.to(user.email).emit("create_notification");
-//         return res.status(200).json({ success: true });
-//     } catch (err) {
-//         console.log(err)
 //     }
 // }
 
