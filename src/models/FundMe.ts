@@ -19,13 +19,15 @@ const FundMeSchema = new monogoose.Schema({
     teaser: {
         type: String,
     },
-    options: [{
-        _id: false,
-        option: {
-            type: Schema.Types.ObjectId,
-            ref: Option
-        }
-    }],
+    reward: {
+        type: Number,
+    },
+    rewardTitle: {
+        type: String,
+    },
+    goal: {
+        type: Number,
+    },
     published: {
         type: Boolean,
         required: true
