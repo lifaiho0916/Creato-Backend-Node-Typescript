@@ -11,12 +11,12 @@ import {
     // getFundmesOngoing,
     saveFundme,
     // supportCreator,
-    // fundCreator,
+    fundCreator,
     // declineFundOption,
     // acceptFundOption,
     // winFundOption,
-    // checkFundMeFinished,
-    // getFundmeDetails,
+    checkFundMeFinished,
+    getFundmeDetails,
     // getFundmeResult,
     // getOptionDetails,
     // getFundCreatorDetails,
@@ -41,13 +41,13 @@ router.get('/delete/:fundmeId', auth, deleteFundme);
 
 // router.get('/ongoingFundmes', getFundmesOngoing);
 // router.post('/personalUrl', getfundmesByPersonalUrl);
-// router.get('/check/finished/:fundmeId', checkFundMeFinished);
-// router.get('/details/:fundmeId', getFundmeDetails);
+router.get('/check/finished/:fundmeId', checkFundMeFinished);
+router.get('/details/:fundmeId', getFundmeDetails);
 // router.get('/result/:fundmeId', getFundmeResult);
 // router.get('/:fundmeId/details/:optionId', getOptionDetails);
 // router.post('/support', auth, supportCreator);
 // router.get('/fund/:fundmeId', getFundCreatorDetails);
-// router.post('/fund/creator', auth, fundCreator);
+router.post('/fund/creator', auth, fundCreator);
 // router.get('/check/requests/:fundmeId', checkFundMeRequests);
 // router.get('/requests/:fundmeId', getFundMeRequests);
 // router.post('/decline', auth, declineFundOption);

@@ -22,7 +22,7 @@ const FundMeSchema = new monogoose.Schema({
     reward: {
         type: Number,
     },
-    rewardTitle: {
+    rewardText: {
         type: String,
     },
     goal: {
@@ -53,6 +53,21 @@ const FundMeSchema = new monogoose.Schema({
         type: Boolean,
         default: true
     },
+    voteInfo: [{
+        _id: false,
+        voter: {
+            type: Schema.Types.ObjectId,
+            ref: User
+        },
+        donuts: {
+            type: Number,
+            required: true
+        },
+        canFree: {
+            type: Boolean,
+            default: true
+        },
+    }],
     date: {
         type: Date,
         default: Date.now()

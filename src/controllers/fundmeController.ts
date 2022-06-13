@@ -3,10 +3,9 @@ import { Request, Response } from "express";
 // import multer from "multer";
 import fs from "fs";
 import FundMe from "../models/FundMe";
-// import User from "../models/User";
-// import Option from "../models/Option";
+import User from "../models/User";
 // import Fanwall from "../models/Fanwall";
-// import AdminWallet from "../models/AdminWallet";
+import AdminWallet from "../models/AdminWallet";
 // import Notification from "../models/Notification";
 // import AdminUserTransaction from "../models/AdminUserTransaction";
 
@@ -51,6 +50,8 @@ export const saveFundme = async (req: Request, res: Response) => {
                 cover: fundme.cover,
                 deadline: fundme.deadline,
                 category: fundme.category,
+                reward: fundme.reward,
+                rewardText: fundme.rewardText,
                 goal: fundme.goal,
                 sizeType: fundme.sizeType,
                 coverIndex: fundme.coverIndex
@@ -131,6 +132,146 @@ export const publishFundme = async (req: Request, res: Response) => {
         return res.status(200).json({ success: true });
     } catch (err) {
         console.log(err)
+    }
+}
+
+export const checkFundMeFinished = async (req: Request, res: Response) => {
+    try {
+        const { fundmeId } = req.params;
+        const fundme = await FundMe.findById(fundmeId);
+        return res.status(200).json({ finished: fundme.finished });
+    } catch (err) {
+        console.log(err);
+    }
+}
+
+export const getFundmeDetails = async (req: Request, res: Response) => {
+    try {
+        const { fundmeId } = req.params;
+        const fundme = await FundMe.findById(fundmeId)
+            .populate({ path: 'owner', select: { 'avatar': 1, 'personalisedUrl': 1, 'name': 1, '_id': 1 } })
+            .select({ 'published': 0, '__v': 0 });
+        if (fundme) {
+            const result = {
+                _id: fundme._id,
+                owner: fundme.owner,
+                title: fundme.title,
+                deadline: fundme.deadline,
+                category: fundme.category,
+                teaser: fundme.teaser,
+                goal: fundme.goal,
+                reward: fundme.reward,
+                rewardText: fundme.rewardText,
+                wallet: fundme.wallet,
+                cover: fundme.cover,
+                sizeType: fundme.sizeType,
+                finished: fundme.finished,
+                voteInfo: fundme.voteInfo,
+                time: (new Date(fundme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * fundme.deadline + 1000 * 60) / (24 * 3600 * 1000),
+            };
+            return res.status(200).json({ success: true, fundme: result });
+        }
+    } catch (err) {
+        console.log(err);
+    }
+}
+
+export const fundCreator = async (req: Request, res: Response) => {
+    try {
+        const { fundmeId, amount, userId } = req.body;
+        const user = await User.findById(userId);
+        const fundme = await FundMe.findById(fundmeId).populate({ path: 'owner' });
+
+        let voteInfo = fundme.voteInfo;
+        let filters = voteInfo.filter((vote: any) => (vote.voter + "") === (userId + ""));
+        if (filters.length) {
+            voteInfo = voteInfo.map((vote: any) => {
+                if ((vote.voter + "") === (userId + "")) {
+                    if (amount !== 1) vote.donuts = vote.donuts + amount;
+                    else vote.canFree = false;
+                }
+                return vote;
+            });
+        } else voteInfo.push({ voter: userId, donuts: amount > 1 ? amount : 0, canFree: amount === 1 ? false : true });
+
+        let fundmeWallet = fundme.wallet + amount;
+        const updateFundme = await FundMe.findByIdAndUpdate(fundme._id, { wallet: fundmeWallet, voteInfo: voteInfo }, { new: true }).populate({ path: 'owner' });
+        const daremePayload = {
+            _id: updateFundme._id,
+            owner: updateFundme.owner,
+            title: updateFundme.title,
+            deadline: updateFundme.deadline,
+            category: updateFundme.category,
+            teaser: updateFundme.teaser,
+            goal: updateFundme.goal,
+            reward: updateFundme.reward,
+            rewardText: updateFundme.rewardText,
+            wallet: updateFundme.wallet,
+            cover: updateFundme.cover,
+            sizeType: updateFundme.sizeType,
+            finished: updateFundme.finished,
+            voteInfo: updateFundme.voteInfo,
+            time: (new Date(updateFundme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * updateFundme.deadline + 1000 * 60) / (24 * 3600 * 1000),
+        }
+        if (amount === 1) {
+            const adminWallet = await AdminWallet.findOne({ admin: "ADMIN" });
+            const adminDonuts = adminWallet.wallet - 1;
+            await AdminWallet.findOneAndUpdate({ admin: "ADMIN" }, { wallet: adminDonuts });
+            req.body.io.to("ADMIN").emit("wallet_change", adminDonuts);
+            // const transaction = new AdminUserTransaction({
+            //     description: 3,
+            //     from: "ADMIN",
+            //     to: "DAREME",
+            //     user: userId,
+            //     dareme: daremeId,
+            //     donuts: 1,
+            //     date: calcTime()
+            // });
+            // await transaction.save();
+            return res.status(200).json({ success: true, fundme: daremePayload });
+        } else {
+            const userWallet = user.wallet - amount;
+            const updatedUser = await User.findByIdAndUpdate(user._id, { wallet: userWallet }, { new: true });
+            const payload = {
+                id: updatedUser._id,
+                name: updatedUser.name,
+                avatar: updatedUser.avatar,
+                role: updatedUser.role,
+                email: updatedUser.email,
+                wallet: updatedUser.wallet,
+                personalisedUrl: updatedUser.personalisedUrl,
+                language: updatedUser.language,
+                category: updatedUser.categories,
+                new_notification: updatedUser.new_notification,
+            };
+            req.body.io.to(updatedUser.email).emit("wallet_change", updatedUser.wallet);
+            return res.status(200).json({ success: true, fundme: daremePayload, user: payload });
+        }
+
+        // const transaction = new AdminUserTransaction({
+        //     description: 6,
+        //     from: "USER",
+        //     to: "FUNDME",
+        //     user: userId,
+        //     fundme: fundmeId,
+        //     donuts: amount,
+        //     date: calcTime()
+        // });
+        // await transaction.save();
+        //new notification
+        // const new_notification = new Notification({
+        //     sender: userId,
+        //     receivers: [fundme.owner],
+        //     message: `<strong>"${user.name}"</strong> dared you in <strong>"${fundme.title}"</strong>, check it out.`,
+        //     theme: "New proposed Dare",
+        //     fundme: fundmeId,
+        //     type: "ongoing_fundme"
+        // })
+        // await new_notification.save();
+        // req.body.io.to(fundme.owner.email).emit("create_notification");
+        //end
+    } catch (err) {
+        console.log(err);
     }
 }
 
@@ -237,16 +378,6 @@ export const publishFundme = async (req: Request, res: Response) => {
 //     uploadTeaser(req, res, () => {
 //         res.status(200).json({ success: true, path: "uploads/teaser/" + req.file?.filename });
 //     });
-// }
-
-// export const checkFundMeFinished = async (req: Request, res: Response) => {
-//     try {
-//         const { fundmeId } = req.params;
-//         const fundme = await FundMe.findById(fundmeId);
-//         return res.status(200).json({ finished: fundme.finished });
-//     } catch (err) {
-//         console.log(err);
-//     }
 // }
 
 // export const getfundmesByPersonalUrl = async (req: Request, res: Response) => {
@@ -458,41 +589,6 @@ export const publishFundme = async (req: Request, res: Response) => {
 //     }
 // }
 
-// export const getFundmeDetails = async (req: Request, res: Response) => {
-//     try {
-//         const { fundmeId } = req.params;
-//         const fundme = await FundMe.findById(fundmeId)
-//             .populate({ path: 'owner', select: { 'avatar': 1, 'personalisedUrl': 1, 'name': 1, '_id': 1 } })
-//             .populate({
-//                 path: 'options.option',
-//                 model: Option,
-//                 populate: { path: 'writer', select: { '_id': 0, 'name': 1 } },
-//                 select: { '__v': 0, 'win': 0 },
-//             }).select({ 'published': 0, 'wallet': 0, '__v': 0 });
-//         if (fundme) {
-//             let donuts = 0;
-//             fundme.options.forEach((option: any) => { if (option.option.status === 1) donuts += option.option.donuts; });
-//             const result = {
-//                 _id: fundme._id,
-//                 owner: fundme.owner,
-//                 title: fundme.title,
-//                 deadline: fundme.deadline,
-//                 category: fundme.category,
-//                 teaser: fundme.teaser,
-//                 donuts: donuts,
-//                 cover: fundme.cover,
-//                 sizeType: fundme.sizeType,
-//                 options: fundme.options,
-//                 finished: fundme.finished,
-//                 time: (new Date(fundme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * fundme.deadline + 1000 * 60) / (24 * 3600 * 1000),
-//             };
-//             return res.status(200).json({ success: true, fundme: result });
-//         }
-//     } catch (err) {
-//         console.log(err);
-//     }
-// }
-
 // export const getFundmeResult = async (req: Request, res: Response) => {
 //     try {
 //         const { fundmeId } = req.params;
@@ -669,68 +765,6 @@ export const publishFundme = async (req: Request, res: Response) => {
 //     } catch (err) {
 //         console.log(err);
 //     }
-// }
-
-// export const fundCreator = async (req: Request, res: Response) => {
-//     const { fundmeId, title, amount, userId } = req.body;
-//     const newOption = new Option({
-//         title: title,
-//         writer: userId,
-//         status: 0,
-//         donuts: amount,
-//         voters: 1,
-//         voteInfo: [{
-//             voter: userId,
-//             donuts: amount
-//         }]
-//     });
-//     const option = await newOption.save();
-//     const user = await User.findById(userId);
-//     const fundme = await FundMe.findById(fundmeId).populate({ path: 'owner' });
-
-//     let fundmeWallet = fundme.wallet + amount;
-//     let options = fundme.options;
-//     options.push({ option: option._id });
-//     await FundMe.findByIdAndUpdate(fundme._id, { options: options, wallet: fundmeWallet }, { new: true });
-//     let wallet = user.wallet - amount;
-//     const updatedUser = await User.findByIdAndUpdate(user._id, { wallet: wallet }, { new: true });
-//     const payload = {
-//         id: updatedUser._id,
-//         name: updatedUser.name,
-//         avatar: updatedUser.avatar,
-//         role: updatedUser.role,
-//         email: updatedUser.email,
-//         wallet: updatedUser.wallet,
-//         personalisedUrl: updatedUser.personalisedUrl,
-//         language: updatedUser.language,
-//         category: updatedUser.categories,
-//         new_notification: updatedUser.new_notification,
-//     };
-//     req.body.io.to(updatedUser.email).emit("wallet_change", updatedUser.wallet);
-//     const transaction = new AdminUserTransaction({
-//         description: 6,
-//         from: "USER",
-//         to: "FUNDME",
-//         user: userId,
-//         fundme: fundmeId,
-//         donuts: amount,
-//         date: calcTime()
-//     });
-//     await transaction.save();
-//     //new notification
-//     const new_notification = new Notification({
-//         sender: userId,
-//         receivers: [fundme.owner],
-//         message: `<strong>"${user.name}"</strong> dared you in <strong>"${fundme.title}"</strong>, check it out.`,
-//         theme: "New proposed Dare",
-//         fundme: fundmeId,
-//         type: "ongoing_fundme"
-//     })
-//     await new_notification.save();
-//     req.body.io.to(fundme.owner.email).emit("create_notification");
-//     //end
-
-//     return res.status(200).json({ success: true, option: option, user: payload });
 // }
 
 // export const checkFundMeRequests = async (req: Request, res: Response) => {
