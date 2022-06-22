@@ -766,7 +766,7 @@ export const getDareCreatorDetails = async (req: Request, res: Response) => {
 }
 
 export const dareCreator = async (req: Request, res: Response) => {
-    const { daremeId, title, amount, userId } = req.body;
+    const { daremeId, title, amount, userId } = req.body; //get params : userId=session,daremeId:
     const newOption = new Option({
         title: title,
         writer: userId,
@@ -778,16 +778,21 @@ export const dareCreator = async (req: Request, res: Response) => {
             donuts: amount
         }]
     });
+
     const option = await newOption.save();
-    const user = await User.findById(userId);
+    const user = await User.findById(userId); // sender who is called this api
     const dareme = await DareMe.findById(daremeId).populate({ path: 'owner' });
 
     let daremeWallet = dareme.wallet + amount;
     let options = dareme.options;
     options.push({ option: option._id });
+
     await DareMe.findByIdAndUpdate(dareme._id, { options: options, wallet: daremeWallet }, { new: true });
+
     let wallet = user.wallet - amount;
+
     const updatedUser = await User.findByIdAndUpdate(user._id, { wallet: wallet }, { new: true });
+
     const payload = {
         id: updatedUser._id,
         name: updatedUser.name,
@@ -800,7 +805,9 @@ export const dareCreator = async (req: Request, res: Response) => {
         category: updatedUser.categories,
         new_notification: updatedUser.new_notification,
     };
+    
     req.body.io.to(updatedUser.email).emit("wallet_change", updatedUser.wallet);
+
     const transaction = new AdminUserTransaction({
         description: 6,
         from: "USER",
@@ -810,7 +817,9 @@ export const dareCreator = async (req: Request, res: Response) => {
         donuts: amount,
         date: calcTime()
     });
+    
     await transaction.save();
+
     //new notification
     // const new_notification = new Notification({
     //     sender: userId,

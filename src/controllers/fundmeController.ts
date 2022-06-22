@@ -4,10 +4,10 @@ import { Request, Response } from "express";
 import fs from "fs";
 import FundMe from "../models/FundMe";
 import User from "../models/User";
-// import Fanwall from "../models/Fanwall";
+import Fanwall from "../models/Fanwall";
 import AdminWallet from "../models/AdminWallet";
 // import Notification from "../models/Notification";
-// import AdminUserTransaction from "../models/AdminUserTransaction";
+import AdminUserTransaction from "../models/AdminUserTransaction";
 
 function calcTime() {
     var d = new Date();
@@ -99,7 +99,7 @@ export const publishFundme = async (req: Request, res: Response) => {
         const fundme = await FundMe.findOne({ owner: userId, published: false });
         const updatedFundme = await FundMe.findByIdAndUpdate(fundme._id, { published: true, date: calcTime() }, { new: true });
 
-        // const admins = await User.find({ role: 'ADMIN' });
+        const admins = await User.find({ role: 'ADMIN' });
         // let new_notification = new Notification({
         //     sender: admins[0],
         //     receivers: [userId],
@@ -114,15 +114,15 @@ export const publishFundme = async (req: Request, res: Response) => {
 
         // const user = await User.findOne({ _id: userId }).populate({ path: 'subscribed_users' });
         // if (user.subscribed_users.length) {
-        //     new_notification = new Notification({
-        //         sender: userId,
-        //         receivers: user.subscribed_users.map((sub_user: any) => sub_user._id),
-        //         message: `<strong>"${user.name}"</strong> created <strong>"${fundme.title}"</strong>, go Fund & support him now!`,
-        //         theme: 'A new FundMe',
-        //         fundme: updatedFundme._id,
-        //         type: "create_fundme",
-        //     })
-        //     await new_notification.save();
+        // new_notification = new Notification({
+        //     sender: userId,
+        //     receivers: user.subscribed_users.map((sub_user: any) => sub_user._id),
+        //     message: `<strong>"${user.name}"</strong> created <strong>"${fundme.title}"</strong>, go Fund & support him now!`,
+        //     theme: 'A new FundMe',
+        //     fundme: updatedFundme._id,
+        //     type: "create_fundme",
+        // })
+        // await new_notification.save();
         //     user.subscribed_users.forEach(async (sub_user: any) => {
         //         await User.findByIdAndUpdate(sub_user._id, { new_notification: true });
         //         req.body.io.to(sub_user.email).emit("create_notification");
@@ -380,142 +380,142 @@ export const fundCreator = async (req: Request, res: Response) => {
 //     });
 // }
 
-// export const getfundmesByPersonalUrl = async (req: Request, res: Response) => {
-//     try {
-//         const { url } = req.body;
-//         const resultFundmes: Array<object> = [];
-//         const user = await User.findOne({ personalisedUrl: url }).select({ 'name': 1, 'avatar': 1, 'personalisedUrl': 1, 'categories': 1, 'subscribed_users': 1 });
-//         const userFundmes = await FundMe.find({ owner: user._id, published: true, show: true })
-//             .populate({ path: 'owner', select: { 'name': 1, 'avatar': 1, 'personalisedUrl': 1, 'status': 1 } })
-//             .populate({ path: 'options.option', select: { 'donuts': 1, '_id': 0, 'status': 1 } })
-//             .select({ 'published': 0, 'wallet': 0, '__v': 0 });
+export const getfundmesByPersonalUrl = async (req: Request, res: Response) => {
+    try {
+        const { url } = req.body;
+        const resultFundmes: Array<object> = [];
+        const user = await User.findOne({ personalisedUrl: url }).select({ 'name': 1, 'avatar': 1, 'personalisedUrl': 1, 'categories': 1, 'subscribed_users': 1 });
+        const userFundmes = await FundMe.find({ owner: user._id, published: true, show: true })
+            .populate({ path: 'owner', select: { 'name': 1, 'avatar': 1, 'personalisedUrl': 1, 'status': 1 } })
+            .populate({ path: 'options.option', select: { 'donuts': 1, '_id': 0, 'status': 1 } })
+            .select({ 'published': 0, 'wallet': 0, '__v': 0 });
 
-//         userFundmes.filter((userFundme: any) => userFundme.finished === false).sort((first: any, second: any) => {
-//             return new Date(first.date).getTime() > new Date(second.date).getTime() ? 1 : new Date(first.date).getTime() < new Date(second.date).getTime() ? -1 : 0;
-//         }).forEach((fundme: any) => {
-//             let donuts = 0;
-//             fundme.options.forEach((option: any) => { if (option.option.status === 1) donuts += option.option.donuts; });
-//             resultFundmes.push({
-//                 _id: fundme._id,
-//                 owner: fundme.owner,
-//                 title: fundme.title,
-//                 deadline: fundme.deadline,
-//                 category: fundme.category,
-//                 teaser: fundme.teaser,
-//                 donuts: donuts,
-//                 cover: fundme.cover,
-//                 sizeType: fundme.sizeType,
-//                 isUserfundme: true,
-//                 finished: fundme.finished,
-//                 time: (new Date(fundme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * fundme.deadline) / (24 * 3600 * 1000),
-//             });
-//         });
+        userFundmes.filter((userFundme: any) => userFundme.finished === false).sort((first: any, second: any) => {
+            return new Date(first.date).getTime() > new Date(second.date).getTime() ? 1 : new Date(first.date).getTime() < new Date(second.date).getTime() ? -1 : 0;
+        }).forEach((fundme: any) => {
+            let donuts = 0;
+            fundme.options.forEach((option: any) => { if (option.option.status === 1) donuts += option.option.donuts; });
+            resultFundmes.push({
+                _id: fundme._id,
+                owner: fundme.owner,
+                title: fundme.title,
+                deadline: fundme.deadline,
+                category: fundme.category,
+                teaser: fundme.teaser,
+                donuts: donuts,
+                cover: fundme.cover,
+                sizeType: fundme.sizeType,
+                isUserfundme: true,
+                finished: fundme.finished,
+                time: (new Date(fundme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * fundme.deadline) / (24 * 3600 * 1000),
+            });
+        });
 
-//         userFundmes.filter((userFundme: any) => userFundme.finished === true).sort((first: any, second: any) => {
-//             return new Date(first.date).getTime() > new Date(second.date).getTime() ? 1 : new Date(first.date).getTime() < new Date(second.date).getTime() ? -1 : 0;
-//         }).forEach((fundme: any) => {
-//             let donuts = 0;
-//             fundme.options.forEach((option: any) => { if (option.option.status === 1) donuts += option.option.donuts; });
-//             resultFundmes.push({
-//                 _id: fundme._id,
-//                 owner: fundme.owner,
-//                 title: fundme.title,
-//                 deadline: fundme.deadline,
-//                 category: fundme.category,
-//                 teaser: fundme.teaser,
-//                 donuts: donuts,
-//                 cover: fundme.cover,
-//                 sizeType: fundme.sizeType,
-//                 isUserfundme: true,
-//                 finished: fundme.finished,
-//                 time: (new Date(fundme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * fundme.deadline) / (24 * 3600 * 1000),
-//             });
-//         });
+        userFundmes.filter((userFundme: any) => userFundme.finished === true).sort((first: any, second: any) => {
+            return new Date(first.date).getTime() > new Date(second.date).getTime() ? 1 : new Date(first.date).getTime() < new Date(second.date).getTime() ? -1 : 0;
+        }).forEach((fundme: any) => {
+            let donuts = 0;
+            fundme.options.forEach((option: any) => { if (option.option.status === 1) donuts += option.option.donuts; });
+            resultFundmes.push({
+                _id: fundme._id,
+                owner: fundme.owner,
+                title: fundme.title,
+                deadline: fundme.deadline,
+                category: fundme.category,
+                teaser: fundme.teaser,
+                donuts: donuts,
+                cover: fundme.cover,
+                sizeType: fundme.sizeType,
+                isUserfundme: true,
+                finished: fundme.finished,
+                time: (new Date(fundme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * fundme.deadline) / (24 * 3600 * 1000),
+            });
+        });
 
-//         const daredFundmes = await FundMe.find({ published: true, show: true })
-//             .where('owner').ne(user._id)
-//             .populate({ path: 'owner', select: { 'name': 1, 'avatar': 1, 'personalisedUrl': 1 } })
-//             .populate({ path: 'options.option', select: { 'donuts': 1, '_id': 0, 'writer': 1, 'status': 1, 'voteInfo': 1 } })
-//             .select({ 'published': 0, 'wallet': 0, '__v': 0 });
+        const daredFundmes = await FundMe.find({ published: true, show: true })
+            .where('owner').ne(user._id)
+            .populate({ path: 'owner', select: { 'name': 1, 'avatar': 1, 'personalisedUrl': 1 } })
+            .populate({ path: 'options.option', select: { 'donuts': 1, '_id': 0, 'writer': 1, 'status': 1, 'voteInfo': 1 } })
+            .select({ 'published': 0, 'wallet': 0, '__v': 0 });
 
-//         daredFundmes.filter((daredFundme: any) => daredFundme.finished === false).sort((first: any, second: any) => {
-//             return new Date(first.date).getTime() > new Date(second.date).getTime() ? 1 : new Date(first.date).getTime() < new Date(second.date).getTime() ? -1 : 0;
-//         }).forEach((fundme: any) => {
-//             var isWriter = false;
-//             for (let i = 0; i < fundme.options.length; i++) {
-//                 if ((fundme.options[i].option.writer + "") === (user._id + "") && fundme.options[i].option.status === 1) {
-//                     isWriter = true;
-//                     break;
-//                 }
-//                 for (let j = 0; j < fundme.options[i].option.voteInfo.length; j++) {
-//                     if ((fundme.options[i].option.voteInfo[j].voter + "") === (user._id + "")) {
-//                         isWriter = true;
-//                         break;
-//                     }
-//                 }
-//                 if (isWriter) break;
-//             }
-//             if (isWriter === true) {
-//                 let donuts = 0;
-//                 fundme.options.forEach((option: any) => { if (option.option.status === 1) donuts += option.option.donuts; });
-//                 resultFundmes.push({
-//                     _id: fundme._id,
-//                     owner: fundme.owner,
-//                     title: fundme.title,
-//                     deadline: fundme.deadline,
-//                     category: fundme.category,
-//                     teaser: fundme.teaser,
-//                     donuts: donuts,
-//                     cover: fundme.cover,
-//                     sizeType: fundme.sizeType,
-//                     finished: fundme.finished,
-//                     isUserfundme: false,
-//                     time: (new Date(fundme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * fundme.deadline + 1000 * 60) / (24 * 3600 * 1000),
-//                 });
-//             }
-//         });
+        daredFundmes.filter((daredFundme: any) => daredFundme.finished === false).sort((first: any, second: any) => {
+            return new Date(first.date).getTime() > new Date(second.date).getTime() ? 1 : new Date(first.date).getTime() < new Date(second.date).getTime() ? -1 : 0;
+        }).forEach((fundme: any) => {
+            var isWriter = false;
+            for (let i = 0; i < fundme.options.length; i++) {
+                if ((fundme.options[i].option.writer + "") === (user._id + "") && fundme.options[i].option.status === 1) {
+                    isWriter = true;
+                    break;
+                }
+                for (let j = 0; j < fundme.options[i].option.voteInfo.length; j++) {
+                    if ((fundme.options[i].option.voteInfo[j].voter + "") === (user._id + "")) {
+                        isWriter = true;
+                        break;
+                    }
+                }
+                if (isWriter) break;
+            }
+            if (isWriter === true) {
+                let donuts = 0;
+                fundme.options.forEach((option: any) => { if (option.option.status === 1) donuts += option.option.donuts; });
+                resultFundmes.push({
+                    _id: fundme._id,
+                    owner: fundme.owner,
+                    title: fundme.title,
+                    deadline: fundme.deadline,
+                    category: fundme.category,
+                    teaser: fundme.teaser,
+                    donuts: donuts,
+                    cover: fundme.cover,
+                    sizeType: fundme.sizeType,
+                    finished: fundme.finished,
+                    isUserfundme: false,
+                    time: (new Date(fundme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * fundme.deadline + 1000 * 60) / (24 * 3600 * 1000),
+                });
+            }
+        });
 
-//         daredFundmes.filter((daredFundme: any) => daredFundme.finished === true).sort((first: any, second: any) => {
-//             return new Date(first.date).getTime() > new Date(second.date).getTime() ? 1 : new Date(first.date).getTime() < new Date(second.date).getTime() ? -1 : 0;
-//         }).forEach((fundme: any) => {
-//             var isWriter = false;
-//             for (let i = 0; i < fundme.options.length; i++) {
-//                 if ((fundme.options[i].option.writer + "") === (user._id + "") && fundme.options[i].option.status === 1) {
-//                     isWriter = true;
-//                     break;
-//                 }
-//                 for (let j = 0; j < fundme.options[i].option.voteInfo.length; j++) {
-//                     if ((fundme.options[i].option.voteInfo[j].voter + "") === (user._id + "")) {
-//                         isWriter = true;
-//                         break;
-//                     }
-//                 }
-//                 if (isWriter) break;
-//             }
-//             if (isWriter === true) {
-//                 let donuts = 0;
-//                 fundme.options.forEach((option: any) => { if (option.option.status === 1) donuts += option.option.donuts; });
-//                 resultFundmes.push({
-//                     _id: fundme._id,
-//                     owner: fundme.owner,
-//                     title: fundme.title,
-//                     deadline: fundme.deadline,
-//                     category: fundme.category,
-//                     teaser: fundme.teaser,
-//                     donuts: donuts,
-//                     cover: fundme.cover,
-//                     sizeType: fundme.sizeType,
-//                     finished: fundme.finished,
-//                     isUserfundme: false,
-//                     time: (new Date(fundme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * fundme.deadline + 1000 * 60) / (24 * 3600 * 1000),
-//                 });
-//             }
-//         });
-//         return res.status(200).json({ fundmes: resultFundmes, user: user });
-//     } catch (err) {
-//         console.log(err);
-//     }
-// }
+        daredFundmes.filter((daredFundme: any) => daredFundme.finished === true).sort((first: any, second: any) => {
+            return new Date(first.date).getTime() > new Date(second.date).getTime() ? 1 : new Date(first.date).getTime() < new Date(second.date).getTime() ? -1 : 0;
+        }).forEach((fundme: any) => {
+            var isWriter = false;
+            for (let i = 0; i < fundme.options.length; i++) {
+                if ((fundme.options[i].option.writer + "") === (user._id + "") && fundme.options[i].option.status === 1) {
+                    isWriter = true;
+                    break;
+                }
+                for (let j = 0; j < fundme.options[i].option.voteInfo.length; j++) {
+                    if ((fundme.options[i].option.voteInfo[j].voter + "") === (user._id + "")) {
+                        isWriter = true;
+                        break;
+                    }
+                }
+                if (isWriter) break;
+            }
+            if (isWriter === true) {
+                let donuts = 0;
+                fundme.options.forEach((option: any) => { if (option.option.status === 1) donuts += option.option.donuts; });
+                resultFundmes.push({
+                    _id: fundme._id,
+                    owner: fundme.owner,
+                    title: fundme.title,
+                    deadline: fundme.deadline,
+                    category: fundme.category,
+                    teaser: fundme.teaser,
+                    donuts: donuts,
+                    cover: fundme.cover,
+                    sizeType: fundme.sizeType,
+                    finished: fundme.finished,
+                    isUserfundme: false,
+                    time: (new Date(fundme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * fundme.deadline + 1000 * 60) / (24 * 3600 * 1000),
+                });
+            }
+        });
+        return res.status(200).json({ fundmes: resultFundmes, user: user });
+    } catch (err) {
+        console.log(err);
+    }
+}
 
 // export const getFundmesOngoing = async (req: Request, res: Response) => {
 //     try {
@@ -589,43 +589,38 @@ export const fundCreator = async (req: Request, res: Response) => {
 //     }
 // }
 
-// export const getFundmeResult = async (req: Request, res: Response) => {
-//     try {
-//         const { fundmeId } = req.params;
-//         const fundme = await FundMe.findById(fundmeId)
-//             .populate({ path: 'owner', select: { 'avatar': 1, 'personalisedUrl': 1, 'name': 1, '_id': 1 } })
-//             .populate({
-//                 path: 'options.option',
-//                 model: Option,
-//                 populate: { path: 'writer', select: { '_id': 0, 'name': 1 } },
-//                 select: { '__v': 0 },
-//             }).select({ 'finished': 0, 'published': 0, 'wallet': 0, '__v': 0 });
-//         if (fundme) {
-//             const fanwall = await Fanwall.findOne({ fundme: fundme._id }).select({ '__v': 0, 'data': 0 });
-//             const options = fundme.options.filter((option: any) => option.option.status === 1);
-//             fundme.options = options;
-//             let donuts = 0;
-//             fundme.options.forEach((option: any) => { if (option.option.status === 1) donuts += option.option.donuts; });
-//             const result = {
-//                 _id: fundme._id,
-//                 owner: fundme.owner,
-//                 title: fundme.title,
-//                 deadline: fundme.deadline,
-//                 category: fundme.category,
-//                 teaser: fundme.teaser,
-//                 donuts: donuts,
-//                 cover: fundme.cover,
-//                 sizeType: fundme.sizeType,
-//                 options: fundme.options,
-//                 finished: fundme.finished,
-//                 time: (new Date(fundme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * fundme.deadline + 1000 * 60) / (24 * 3600 * 1000),
-//             };
-//             return res.status(200).json({ success: true, fundme: result, fanwall: fanwall });
-//         }
-//     } catch (err) {
-//         console.log(err);
-//     }
-// }
+export const getFundmeResult = async (req: Request, res: Response) => {
+    try {
+        const { fundmeId } = req.params;
+        const fundme = await FundMe.findById(fundmeId)
+            .populate([{ path: 'owner', select: { 'avatar': 1, 'personalisedUrl': 1, 'name': 1, '_id': 1 } }, { path: 'voteInfo.voter', select: { '_id': 0, 'name': 1, 'canFee': 1 } }])
+            .select({ 'finished': 0, 'published': 0,'__v': 0 });
+        if (fundme) {
+            const fanwall = await Fanwall.findOne({ fundme: fundme._id }).select({ '__v': 0, 'data': 0 });
+            // let donuts = 0;
+            const result = {
+                _id: fundme._id,
+                owner: fundme.owner,
+                title: fundme.title,
+                deadline: fundme.deadline,
+                category: fundme.category,
+                teaser: fundme.teaser,
+                goal: fundme.goal,
+                reward: fundme.reward,
+                rewardText: fundme.rewardText,
+                wallet: fundme.wallet,
+                cover: fundme.cover,
+                sizeType: fundme.sizeType,
+                finished: fundme.finished,
+                voteInfo: fundme.voteInfo,
+                time: (new Date(fundme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * fundme.deadline + 1000 * 60) / (24 * 3600 * 1000),
+            };
+            return res.status(200).json({ success: true, fundme: result, fanwall: fanwall });
+        }
+    } catch (err) {
+        console.log(err);
+    }
+}
 
 // export const getOptionDetails = async (req: Request, res: Response) => {
 //     try {
@@ -1001,21 +996,15 @@ export const fundCreator = async (req: Request, res: Response) => {
 //     }
 // }
 
-// export const getFundmeOptions = async (req: Request, res: Response) => {
-//     try {
-//         const { fundmeId } = req.params;
-//         const fundme = await FundMe.findById(fundmeId)
-//             .populate({
-//                 path: 'options.option',
-//                 model: Option,
-//                 populate: [
-//                     { path: 'writer', select: { '_id': 0, 'name': 1 } },
-//                     { path: 'voteInfo.voter', select: { '_id': 0, 'name': 1, 'avatar': 1 } }
-//                 ]
-//             });
-//         const options = fundme.options;
-//         return res.status(200).json({ success: true, options: options });
-//     } catch (err) {
-//         console.log(err);
-//     }
-// }
+export const getFundmeOptions = async (req: Request, res: Response) => {
+    try {
+        const { fundmeId } = req.params;
+        const fundme = await FundMe.findById(fundmeId)
+            .populate(
+                { path: 'voteInfo.voter', select: { '_id': 0, 'name': 1, 'avatar': 1 } }
+            );
+        return res.status(200).json({ success: true, votes: fundme.voteInfo });
+    } catch (err) {
+        console.log(err);
+    }
+}

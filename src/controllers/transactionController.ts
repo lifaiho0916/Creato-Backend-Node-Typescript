@@ -15,17 +15,20 @@ export const getTransactions = async (req: Request, res: Response) => {
     try {
         const { type } = req.params;
         const adminWallet = await AdminWallet.findOne({ admin: "ADMIN" });
-        const adminDonuts = adminWallet.wallet;
+        const adminDonuts = adminWallet.wallet; //admin' s donuts
         const users = await User.find({ role: "USER" });
         let userDonuts = 0.0;
+
         users.forEach((user: any) => {
             userDonuts += user.wallet;
         });
+
         const daremes = await DareMe.find({});
         let daremeDonuts = 0.0;
         daremes.forEach((dareme: any) => {
             daremeDonuts += dareme.wallet;
         });
+
         const resUsers = await User.find({}).select({ 'name': 1, 'role': 1 });
         let transactions: any = [];
         if (Number(type) === 0)

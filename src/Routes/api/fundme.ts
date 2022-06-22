@@ -7,7 +7,7 @@ import {
     getDraftFundme,
     // uploadFile,
     publishFundme,
-    // getfundmesByPersonalUrl,
+    getfundmesByPersonalUrl,
     // getFundmesOngoing,
     saveFundme,
     // supportCreator,
@@ -17,12 +17,13 @@ import {
     // winFundOption,
     checkFundMeFinished,
     getFundmeDetails,
-    // getFundmeResult,
+    getFundmeResult,
     // getOptionDetails,
     // getFundCreatorDetails,
     // checkFundMeRequests,
     // getFundMeRequests,
     deleteFundme,
+    getFundmeOptions,
     // selectCover,
     // getFundMeList,
     // setFundMeShow,
@@ -40,10 +41,10 @@ router.get('/delete/:fundmeId', auth, deleteFundme);
 // router.post('/save/cover', auth, selectCover);
 
 // router.get('/ongoingFundmes', getFundmesOngoing);
-// router.post('/personalUrl', getfundmesByPersonalUrl);
+router.post('/personalUrl', getfundmesByPersonalUrl);
 router.get('/check/finished/:fundmeId', checkFundMeFinished);
 router.get('/details/:fundmeId', getFundmeDetails);
-// router.get('/result/:fundmeId', getFundmeResult);
+router.get('/result/:fundmeId', getFundmeResult);
 // router.get('/:fundmeId/details/:optionId', getOptionDetails);
 // router.post('/support', auth, supportCreator);
 // router.get('/fund/:fundmeId', getFundCreatorDetails);
@@ -61,5 +62,5 @@ router.post('/fund/creator', auth, fundCreator);
 // router.delete('/fundmes/:fundmeId', auth, deleteFundMe);
 // router.put('/fundmes/:fundmeId', auth, updateFundMe);
 // router.delete('/fundmes/:fundmeId/options/:optionId', auth, deleteOption);
-
+router.get('/voters/:fundmeId', auth, getFundmeOptions)
 export default router;

@@ -9,6 +9,7 @@ import Option from "../models/Option";
 import User from "../models/User";
 import AdminWallet from "../models/AdminWallet";
 import AdminUserTransaction from '../models/AdminUserTransaction';
+import { getTransactions } from './transactionController';
 
 function calcTime() {
     var d = new Date();
@@ -49,29 +50,34 @@ export const saveFanwall = async (req: Request, res: Response) => {
                 const dareme = await DareMe.findById(daremeId).populate({ path: 'writer' });
                 if (dareme.wallet > 0) {
                     const user = await User.findById(userId);
-                    await User.findByIdAndUpdate(userId, { wallet: user.wallet + dareme.wallet / 100 * 90 });
-                    req.body.io.to(user.email).emit("wallet_change", user.wallet + dareme.wallet / 100 * 90);
+                    await User.findByIdAndUpdate(userId, { wallet: user.wallet + dareme.wallet * 0.9 });
+                    req.body.io.to(user.email).emit("wallet_change", user.wallet + dareme.wallet * 0.9);
                     const adminWallet = await AdminWallet.findOne({ admin: "ADMIN" });
-                    await AdminWallet.findOneAndUpdate({ admin: "ADMIN" }, { wallet: adminWallet.wallet + dareme.wallet / 100 * 10 });
-                    req.body.io.to("ADMIN").emit("wallet_change", adminWallet.wallet + dareme.wallet / 100 * 10);
+                    await AdminWallet.findOneAndUpdate({ admin: "ADMIN" }, { wallet: adminWallet.wallet + dareme.wallet * 0.1 });
+                    req.body.io.to("ADMIN").emit("wallet_change", adminWallet.wallet + dareme.wallet * 0.1);
+
                     const transactionAdmin = new AdminUserTransaction({
                         description: 4,
                         from: "DAREME",
                         to: "ADMIN",
                         dareme: dareme._id,
-                        donuts: dareme.wallet / 100 * 10,
+                        user: userId,
+                        donuts: dareme.wallet * 0.1,
                         date: calcTime()
                     });
+
                     await transactionAdmin.save();
+
                     const transactionUser = new AdminUserTransaction({
                         description: 4,
                         from: "DAREME",
                         to: "USER",
                         user: userId,
                         dareme: dareme._id,
-                        donuts: dareme.wallet / 100 * 90,
+                        donuts: dareme.wallet * 0.9,
                         date: calcTime()
                     });
+
                     await transactionUser.save();
                     await DareMe.findByIdAndUpdate(daremeId, { wallet: 0 });
                 }
@@ -165,9 +171,7 @@ export const fanwallGetByFundMeId = async (req: Request, res: Response) => {
     try {
         const { fundmeId } = req.params;
         const fundme = await FundMe.findById(fundmeId)
-            .populate({ path: 'owner', select: { 'avatar': 1, 'name': 1, 'personalisedUrl': 1 } })
-            .populate({ path: 'options.option', select: { 'title': 1, 'win': 1 } })
-            .select({ 'teaser': 1, 'cover': 1, 'sizeType': 1, 'options': 1 });
+            .populate([{ path: 'owner', select: { 'avatar': 1, 'name': 1, 'personalisedUrl': 1 } }, { path: 'voteInfo.voter', select: { '_id': 0, 'name': 1, 'avatar': 1 } }]);
         const fanwall = await Fanwall.findOne({ fundme: fundmeId });
         return res.status(200).json({ success: true, fundme: fundme, fanwall: fanwall });
     } catch (err) {
@@ -438,4 +442,67 @@ export const deleteFanwall = async (req: Request, res: Response) => {
     } catch (err) {
         console.log(err);
     }
+}
+
+
+/**
+ * 
+ * 
+ */
+export const modityIssue = async (req: Request, res: Response) => {
+    try {
+        const transactions = await AdminUserTransaction.find({ description: 4 });
+        if (transactions.length > 0) {
+            transactions.map((item: any) => {
+                if (item.from == 'DAREME' && new Date(item.date) < new Date('2022-06-19T21:00:00.000Z')) {
+                    if (item.to == 'ADMIN') {
+                        AdminUserTransaction.findByIdAndUpdate(item._id, { to: 'USER' }).then((r: any) => console.log(r));
+                    } else if (item.to == 'USER') {
+                        AdminUserTransaction.findByIdAndUpdate(item._id, { to: 'ADMIN' }).then((r: any) => console.log(r));
+                    }
+                }
+            });
+            return res.status(200).json({ success: true });
+        }
+        return res.status(200).json({ success: true, status: 0 })
+    } catch (err) {
+        return res.status(200).json({ error: err });
+    }
+}
+
+export const getTransaction = async (req: Request, res: Response) => {
+    const { transactionId } = req.params;
+    console.log(transactionId);
+    const transaction = await AdminUserTransaction.findById(transactionId);
+    if (transaction) {
+        return res.status(200).json(transaction);
+    } else return res.status(200).json({ error: true });
+}
+
+
+export const setTransaction = async (req: Request, res: Response) => {
+    const { transactionId } = req.params;
+    const { donuts, description, from, to } = req.body;
+    await AdminUserTransaction.findByIdAndUpdate(transactionId, { from: from, to: to, description: description, donuts: donuts });
+    return res.status(200).json({ success: true });
+}
+
+
+export const setUser = async (req: Request, res: Response) => {
+    const transactions = await AdminUserTransaction.find({ description: 4, from: 'DAREME', to: 'USER' });
+    if (transactions.length > 0) {
+        transactions.map((item: any) => {
+            let admin = AdminUserTransaction.findOne({ dareme: item.dareme, description: 4, from: 'DAREME', to: 'ADMIN' });
+            AdminUserTransaction.findByIdAndUpdate(item._id, { user: admin.user ? admin.user : item.user ? item.user : 'admin' });
+        });
+        return res.status(200).json({ success: true });
+    } else return res.status(200).json({ error: true });
+}
+
+export const checkTransaction = async (req: Request, res: Response) => {
+    const { transactionId } = req.params;
+    const log = await AdminUserTransaction.findById(transactionId);
+    const result = await AdminUserTransaction.findOne({ dareme: log.dareme, description: 4, from: 'DAREME', to: 'USER' });
+    if (result) return res.status(200).json(result);
+    else return res.status(200).json({ error: true });
 }
