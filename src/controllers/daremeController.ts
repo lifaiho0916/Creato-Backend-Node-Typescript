@@ -486,13 +486,17 @@ export const getDaremesOngoing = async (req: Request, res: Response) => {
             .populate({ path: 'owner', select: { 'avatar': 1, 'personalisedUrl': 1, 'name': 1 } })
             .populate({ path: 'options.option', select: { 'donuts': 1, '_id': 0, 'status': 1 } })
             .select({ 'published': 0, 'wallet': 0, '__v': 0 });
-        let resDaremes = <Array<any>>[];
+        const fundmes = await FundMe.find({ published: true, show: true })
+            .populate({ path: 'owner', select: { 'avatar': 1, 'personalisedUrl': 1, 'name': 1 } })
+            .select({ 'published': 0,'__v': 0 });
+        let resItems = <Array<any>>[];
         for (const dareme of daremes) {
             let donuts = 0;
-            const fanwall = await Fanwall.findOne({ dareme: dareme._id });
+            let fanwall = await Fanwall.findOne({ dareme: dareme._id });
             dareme.options.forEach((option: any) => { if (option.option.status === 1) donuts += option.option.donuts; });
-            resDaremes.push({
+            resItems.push({
                 id: dareme._id,
+                type: 'dareme',
                 owner: dareme.owner,
                 title: dareme.title,
                 deadline: dareme.deadline,
@@ -508,45 +512,97 @@ export const getDaremesOngoing = async (req: Request, res: Response) => {
             });
         }
 
+        for (const fundme of fundmes) {
+            let fanwall = await Fanwall.findOne({ fundme: fundme._id });
+            resItems.push({
+                id: fundme._id,
+                type: 'fundme',
+                goal:fundme.goal,
+                owner: fundme.owner,
+                title: fundme.title,
+                deadline: fundme.deadline,
+                category: fundme.category,
+                teaser: fundme.teaser,
+                donuts: fundme.wallet,
+                finished: fundme.finished,
+                sizeType: fundme.sizeType,
+                cover: fundme.cover,
+                date: fundme.date,
+                fanwall: fanwall ? fanwall.posted : false,
+                time: (new Date(fundme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * fundme.deadline) / (24 * 3600 * 1000),
+            });
+        }
+
         const fanwalls = await Fanwall.find({ posted: true })
             .populate({ path: 'writer', select: { 'avatar': 1, 'personalisedUrl': 1, 'name': 1 } })
-            .populate({
-                path: 'dareme',
-                Model: DareMe,
-                select: {
-                    'title': 1, 'deadline': 1, 'category': 1
+            .populate([
+                {
+                    path: 'dareme',
+                    Model: DareMe,
+                    select: {
+                        'title': 1, 'deadline': 1, 'category': 1
+                    },
+                    populate: {
+                        path: 'options.option',
+                        model: Option
+                    }
                 },
-                populate: {
-                    path: 'options.option',
-                    model: Option
+                {
+                    path: 'fundme',
+                    Model: FundMe,
+                    select: {
+                        'title': 1, 'deadline': 1, 'category': 1, 'goal': 1, 'wallet': 1,
+                    }
                 }
-            });
+            ]);
+
+
         let resFanwalls = <Array<any>>[];
         fanwalls.sort((first: any, second: any) => {
             return first.date < second.date ? 1 : first.date > second.date ? -1 : 0;
         }).forEach((fanwall: any) => {
             let totalDonuts = 0;
-            fanwall.dareme.options.forEach((option: any) => { if (option.option.status === 1) totalDonuts += option.option.donuts; });
-            resFanwalls.push({
-                'id': fanwall._id,
-                'date': fanwall.date,
-                'writer': fanwall.writer,
-                'video': fanwall.video,
-                'sizeType': fanwall.sizeType,
-                'cover': fanwall.cover,
-                'message': fanwall.message,
-                'embedUrl': fanwall.embedUrl,
-                'unlocks': fanwall.unlocks,
-                'dareme': {
-                    'title': fanwall.dareme.title,
-                    'options': fanwall.dareme.options,
-                    'category': fanwall.dareme.category,
-                    'donuts': totalDonuts
-                }
-            });
+            if (fanwall.dareme) {
+                fanwall.dareme.options.forEach((option: any) => { if (option.option.status === 1) totalDonuts += option.option.donuts; });
+                resFanwalls.push({
+                    'id': fanwall._id,
+                    'date': fanwall.date,
+                    'writer': fanwall.writer,
+                    'video': fanwall.video,
+                    'sizeType': fanwall.sizeType,
+                    'cover': fanwall.cover,
+                    'message': fanwall.message,
+                    'embedUrl': fanwall.embedUrl,
+                    'unlocks': fanwall.unlocks,
+                    'dareme': {
+                        'title': fanwall.dareme.title,
+                        'options': fanwall.dareme.options,
+                        'category': fanwall.dareme.category,
+                        'donuts': totalDonuts
+                    }
+                });
+            } else if (fanwall.fundme) {
+                resFanwalls.push({
+                    'id': fanwall._id,
+                    'date': fanwall.date,
+                    'writer': fanwall.writer,
+                    'video': fanwall.video,
+                    'sizeType': fanwall.sizeType,
+                    'cover': fanwall.cover,
+                    'message': fanwall.message,
+                    'embedUrl': fanwall.embedUrl,
+                    'unlocks': fanwall.unlocks,
+                    'dareme': {
+                        'title': fanwall.fundme.title,
+                        'category': fanwall.fundme.category,
+                        'donuts': fanwall.fundme.wallet,
+                        'goal': fanwall.fundme.goal,
+                    }
+                });
+            }
         });
 
-        return res.status(200).json({ daremes: resDaremes, fanwalls: resFanwalls });
+        return res.status(200).json({ daremes: resItems, fanwalls: resFanwalls });
     } catch (err) {
         console.log(err);
     }
@@ -805,7 +861,7 @@ export const dareCreator = async (req: Request, res: Response) => {
         category: updatedUser.categories,
         new_notification: updatedUser.new_notification,
     };
-    
+
     req.body.io.to(updatedUser.email).emit("wallet_change", updatedUser.wallet);
 
     const transaction = new AdminUserTransaction({
@@ -817,7 +873,7 @@ export const dareCreator = async (req: Request, res: Response) => {
         donuts: amount,
         date: calcTime()
     });
-    
+
     await transaction.save();
 
     //new notification

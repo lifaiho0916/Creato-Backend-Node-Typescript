@@ -2,11 +2,11 @@ import express from 'express';
 const router = express.Router();
 import auth from "../../middleware/auth";
 import {
-    saveFanwall, 
-    uploadFile, 
-    fanwallGetByDareMeId, 
+    saveFanwall,
+    uploadFile,
+    fanwallGetByDareMeId,
     fanwallGetByFundMeId,
-    getPostDetail, 
+    getPostDetail,
     getFanwallsByPersonalUrl,
     likeFanwall,
     unlockFanwall,
@@ -15,7 +15,8 @@ import {
     getTransaction,
     setTransaction,
     setUser,
-    checkTransaction
+    checkTransaction,
+    dumpFanwall
 } from '../../controllers/fanwallController';
 
 router.post('/personalUrl', getFanwallsByPersonalUrl)
@@ -27,11 +28,14 @@ router.get('/getById/:fanwallId', getPostDetail);
 router.post('/upload', auth, uploadFile);
 router.post('/save', auth, saveFanwall);
 
-router.get('/modify',modityIssue);
-router.get('/get/:transactionId',getTransaction);
-router.get('/set/user',setUser);
-router.get('/check/:transactionId',checkTransaction);
-router.post('/set/:transactionId',setTransaction);
+router.get('/modify', modityIssue);
+router.get('/get/:transactionId', getTransaction);
+router.get('/set/user', setUser);
+router.get('/check/:transactionId', checkTransaction);
+router.post('/set/:transactionId', setTransaction);
 
 router.delete('/:fanwallId', auth, deleteFanwall);
+router.get('/get/fanwall/all', dumpFanwall);
+
+
 export default router;

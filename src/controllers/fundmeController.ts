@@ -62,6 +62,7 @@ export const saveFundme = async (req: Request, res: Response) => {
             fundme.published = false;
             const newFundme = new FundMe(fundme);
             const resNewFundme = await newFundme.save();
+            
             const resultFundme = await FundMe.findById(resNewFundme._id);
             if (resultFundme) res.status(200).json({ success: true, fundme: resultFundme });
         }

@@ -33,7 +33,7 @@ export const googleSignin = async (req: Request, res: Response) => {
         const userData = req.body;
         const email = userData.email;
         const browser = userData.browser;
-
+        
         const user = await User.findOne({ email: email });
         const adminDonuts = await AdminWallet.findOne({ admin: "ADMIN" });
         if (user) {
@@ -100,6 +100,7 @@ export const googleSignup = async (req: Request, res: Response) => {
         if (user) googleSignin(req, res)
         else {
             const password = userData.email + userData.googleId;
+            const bonus = Date.now() - new Date("Fr July 03 2022 00:00:00 GMT+0800").getTime() <= 0 ? 60 : 30;
             bcrypt.genSalt(10, (err: any, salt: any) => {
                 bcrypt.hash(password, salt, (err: any, hash: any) => {
                     if (err) throw err;
@@ -107,7 +108,7 @@ export const googleSignup = async (req: Request, res: Response) => {
                         email: userData.email,
                         avatar: userData.avatar,
                         name: userData.name,
-                        wallet: 60,
+                        wallet: bonus,
                         role: role,
                         password: hash,
                         date: calcTime()
@@ -239,11 +240,12 @@ export const facebookSignup = async (req: Request, res: Response) => {
             bcrypt.genSalt(10, (err: any, salt: any) => {
                 bcrypt.hash(password, salt, (err: any, hash: any) => {
                     if (err) throw err;
+                    const bonus = Date.now() - new Date("Fr July 03 2022 00:00:00 GMT+0800").getTime() <= 0 ? 60 : 30;
                     const newUser = new User({
                         email: userData.email,
                         avatar: userData.avatar,
                         name: userData.name,
-                        wallet: 60,
+                        wallet: bonus,
                         role: role,
                         password: hash,
                         date: calcTime()
@@ -305,6 +307,7 @@ export const getAuthData = async (req: Request, res: Response) => {
     try {
         const { userId } = req.body;
         const user = await User.findById(userId);
+        // if (!user) return res.status(200).json({ user: null });
         const adminDonuts = await AdminWallet.findOne({ admin: "ADMIN" });
         const payload = {
             id: user._id,
