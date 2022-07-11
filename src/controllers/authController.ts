@@ -100,7 +100,6 @@ export const googleSignup = async (req: Request, res: Response) => {
         if (user) googleSignin(req, res)
         else {
             const password = userData.email + userData.googleId;
-            const bonus = Date.now() - new Date("Fr July 03 2022 00:00:00 GMT+0800").getTime() <= 0 ? 60 : 30;
             bcrypt.genSalt(10, (err: any, salt: any) => {
                 bcrypt.hash(password, salt, (err: any, hash: any) => {
                     if (err) throw err;
@@ -108,7 +107,7 @@ export const googleSignup = async (req: Request, res: Response) => {
                         email: userData.email,
                         avatar: userData.avatar,
                         name: userData.name,
-                        wallet: bonus,
+                        wallet: 30,
                         role: role,
                         password: hash,
                         date: calcTime()
@@ -240,12 +239,11 @@ export const facebookSignup = async (req: Request, res: Response) => {
             bcrypt.genSalt(10, (err: any, salt: any) => {
                 bcrypt.hash(password, salt, (err: any, hash: any) => {
                     if (err) throw err;
-                    const bonus = Date.now() - new Date("Fr July 03 2022 00:00:00 GMT+0800").getTime() <= 0 ? 60 : 30;
                     const newUser = new User({
                         email: userData.email,
                         avatar: userData.avatar,
                         name: userData.name,
-                        wallet: bonus,
+                        wallet: 30,
                         role: role,
                         password: hash,
                         date: calcTime()

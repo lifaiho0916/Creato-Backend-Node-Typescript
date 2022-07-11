@@ -79,7 +79,7 @@ export const deleteFundme = async (req: Request, res: Response) => {
             const filePath = "public/" + fundme.teaser;
             fs.unlink(filePath, (err) => {
                 if (err) throw err;
-            });
+            })
         }
         if (fundme.cover) {
             const filePath = "public/" + fundme.cover;
@@ -219,16 +219,16 @@ export const fundCreator = async (req: Request, res: Response) => {
             const adminDonuts = adminWallet.wallet - 1;
             await AdminWallet.findOneAndUpdate({ admin: "ADMIN" }, { wallet: adminDonuts });
             req.body.io.to("ADMIN").emit("wallet_change", adminDonuts);
-            // const transaction = new AdminUserTransaction({
-            //     description: 3,
-            //     from: "ADMIN",
-            //     to: "DAREME",
-            //     user: userId,
-            //     dareme: daremeId,
-            //     donuts: 1,
-            //     date: calcTime()
-            // });
-            // await transaction.save();
+            const transaction = new AdminUserTransaction({
+                description: 3,
+                from: "ADMIN",
+                to: "FUNDME",
+                user: userId,
+                fundme: fundmeId,
+                donuts: 1,
+                date: calcTime()
+            });
+            await transaction.save();
             return res.status(200).json({ success: true, fundme: daremePayload });
         } else {
             const userWallet = user.wallet - amount;
@@ -245,20 +245,21 @@ export const fundCreator = async (req: Request, res: Response) => {
                 category: updatedUser.categories,
                 new_notification: updatedUser.new_notification,
             };
+            const transaction = new AdminUserTransaction({
+                description: 6,
+                from: "USER",
+                to: "FUNDME",
+                user: userId,
+                fundme: fundmeId,
+                donuts: amount,
+                date: calcTime()
+            });
+            await transaction.save();
             req.body.io.to(updatedUser.email).emit("wallet_change", updatedUser.wallet);
             return res.status(200).json({ success: true, fundme: daremePayload, user: payload });
         }
 
-        // const transaction = new AdminUserTransaction({
-        //     description: 6,
-        //     from: "USER",
-        //     to: "FUNDME",
-        //     user: userId,
-        //     fundme: fundmeId,
-        //     donuts: amount,
-        //     date: calcTime()
-        // });
-        // await transaction.save();
+        
         //new notification
         // const new_notification = new Notification({
         //     sender: userId,
@@ -395,7 +396,7 @@ export const getfundmesByPersonalUrl = async (req: Request, res: Response) => {
             return new Date(first.date).getTime() > new Date(second.date).getTime() ? 1 : new Date(first.date).getTime() < new Date(second.date).getTime() ? -1 : 0;
         }).forEach((fundme: any) => {
             let donuts = 0;
-            fundme.options.forEach((option: any) => { if (option.option.status === 1) donuts += option.option.donuts; });
+            if (fundme.options) fundme.options.forEach((option: any) => { if (option.option.status === 1) donuts += option.option.donuts; });
             resultFundmes.push({
                 _id: fundme._id,
                 owner: fundme.owner,
@@ -416,7 +417,7 @@ export const getfundmesByPersonalUrl = async (req: Request, res: Response) => {
             return new Date(first.date).getTime() > new Date(second.date).getTime() ? 1 : new Date(first.date).getTime() < new Date(second.date).getTime() ? -1 : 0;
         }).forEach((fundme: any) => {
             let donuts = 0;
-            fundme.options.forEach((option: any) => { if (option.option.status === 1) donuts += option.option.donuts; });
+            if (fundme.options) fundme.options.forEach((option: any) => { if (option.option.status === 1) donuts += option.option.donuts; });
             resultFundmes.push({
                 _id: fundme._id,
                 owner: fundme.owner,
@@ -874,46 +875,46 @@ export const getFundmeResult = async (req: Request, res: Response) => {
 //     }
 // }
 
-// export const getFundMeList = async (req: Request, res: Response) => {
-//     try {
-//         const { search } = req.body;
-//         if (search === "") {
-//             const fundmes = await FundMe.find({ 'published': true })
-//                 .populate({ path: 'owner', select: { 'name': 1, 'categories': 1 } })
-//                 .select({ 'title': 1, 'category': 1, 'date': 1, 'deadline': 1, 'finished': 1, 'owner': 1, 'show': 1 });
-//             var result: Array<object> = [];
-//             for (const fundme of fundmes) {
-//                 let time = 0.0;
-//                 if (!fundme.finished) time = (new Date(fundme.date).getTime() - Date.now() + 3600 * 24 * fundme.deadline * 1000) / (1000 * 24 * 3600);
-//                 result.push({
-//                     id: fundme._id,
-//                     date: fundme.date,
-//                     time: time,
-//                     finished: fundme.finished,
-//                     owner: fundme.owner,
-//                     category: fundme.category,
-//                     title: fundme.title,
-//                     wallet: fundme.wallet,
-//                     show: fundme.show
-//                 });
-//             }
-//             return res.status(200).json({ success: true, fundmes: result });
-//         }
-//     } catch (err) {
-//         console.log(err);
-//     }
-// }
+export const getFundMeList = async (req: Request, res: Response) => {
+    try {
+        const { search } = req.body;
+        if (search === "") {
+            const fundmes = await FundMe.find({ 'published': true })
+                .populate({ path: 'owner', select: { 'name': 1, 'categories': 1 } })
+                .select({ 'title': 1, 'category': 1, 'date': 1, 'deadline': 1, 'finished': 1, 'owner': 1, 'show': 1 });
+            var result: Array<object> = [];
+            for (const fundme of fundmes) {
+                let time = 0.0;
+                if (!fundme.finished) time = (new Date(fundme.date).getTime() - Date.now() + 3600 * 24 * fundme.deadline * 1000) / (1000 * 24 * 3600);
+                result.push({
+                    id: fundme._id,
+                    date: fundme.date,
+                    time: time,
+                    finished: fundme.finished,
+                    owner: fundme.owner,
+                    category: fundme.category,
+                    title: fundme.title,
+                    wallet: fundme.wallet,
+                    show: fundme.show
+                });
+            }
+            return res.status(200).json({ success: true, fundmes: result });
+        }
+    } catch (err) {
+        console.log(err);
+    }
+}
 
-// export const setFundMeShow = async (req: Request, res: Response) => {
-//     try {
-//         const { fundmeId } = req.params;
-//         const { show } = req.body;
-//         const updatedFundme = await FundMe.findByIdAndUpdate(fundmeId, { show: show }, { new: true });
-//         if (updatedFundme) return res.status(200).json({ success: true });
-//     } catch (err) {
-//         console.log(err);
-//     }
-// }
+export const setFundMeShow = async (req: Request, res: Response) => {
+    try {
+        const { fundmeId } = req.params;
+        const { show } = req.body;
+        const updatedFundme = await FundMe.findByIdAndUpdate(fundmeId, { show: show }, { new: true });
+        if (updatedFundme) return res.status(200).json({ success: true });
+    } catch (err) {
+        console.log(err);
+    }
+}
 
 // export const deleteFundMe = async (req: Request, res: Response) => {
 //     try {
@@ -942,39 +943,35 @@ export const getFundmeResult = async (req: Request, res: Response) => {
 //     }
 // }
 
-// export const updateFundMe = async (req: Request, res: Response) => {
-//     try {
-//         const { fundmeId } = req.params;
-//         const { fundme } = req.body;
-//         const resFundme = await FundMe.findById(fundmeId);
-//         if (fundme.teaserFile) {
-//             const filePath = "public/" + resFundme.teaser;
-//             fs.unlink(filePath, (err) => {
-//                 if (err) throw err;
-//             });
-//         }
-//         if (fundme.coverFile && resFundme.cover) {
-//             const filePath = "public/" + resFundme.cover;
-//             fs.unlink(filePath, (err) => {
-//                 if (err) throw err;
-//             });
-//         }
-//         if (fundme.options) {
-//             await Option.findByIdAndUpdate(fundme.options[0].option._id, { title: fundme.options[0].option.title });
-//             await Option.findByIdAndUpdate(fundme.options[1].option._id, { title: fundme.options[1].option.title });
-//         }
-//         await FundMe.findByIdAndUpdate(fundmeId, {
-//             title: fundme.title,
-//             category: fundme.category,
-//             teaser: fundme.teaserFile ? fundme.teaserFile : resFundme.teaser,
-//             cover: fundme.coverFile ? fundme.coverFile : resFundme.cover,
-//             sizeType: fundme.teaserType !== null ? fundme.teaserType : resFundme.sizeType
-//         });
-//         return res.status(200).json({ success: true });
-//     } catch (err) {
-//         console.log(err);
-//     }
-// }
+export const updateFundMe = async (req: Request, res: Response) => {
+    try {
+        const { fundmeId } = req.params;
+        const { fundme } = req.body;
+        const resFundme = await FundMe.findById(fundmeId);
+        if (fundme.teaserFile) {
+            const filePath = "public/" + resFundme.teaser;
+            fs.unlink(filePath, (err) => {
+                if (err) throw err;
+            });
+        }
+        if (fundme.coverFile && resFundme.cover) {
+            const filePath = "public/" + resFundme.cover;
+            fs.unlink(filePath, (err) => {
+                if (err) throw err;
+            });
+        }
+        await FundMe.findByIdAndUpdate(fundmeId, {
+            title: fundme.title,
+            category: fundme.category,
+            teaser: fundme.teaserFile ? fundme.teaserFile : resFundme.teaser,
+            cover: fundme.coverFile ? fundme.coverFile : resFundme.cover,
+            sizeType: fundme.teaserType !== null ? fundme.teaserType : resFundme.sizeType
+        });
+        return res.status(200).json({ success: true });
+    } catch (err) {
+        console.log(err);
+    }
+}
 
 // export const deleteOption = async (req: Request, res: Response) => {
 //     try {

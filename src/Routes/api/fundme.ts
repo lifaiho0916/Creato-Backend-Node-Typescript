@@ -25,10 +25,9 @@ import {
     deleteFundme,
     getFundmeOptions,
     // selectCover,
-    // getFundMeList,
-    // setFundMeShow,
-    // deleteFundMe,
-    // updateFundMe,
+    getFundMeList,
+    setFundMeShow,
+    updateFundMe,
     // deleteOption,
     // getFundmeOptions
 } from '../../controllers/fundmeController'
@@ -57,10 +56,10 @@ router.post('/fund/creator', auth, fundCreator);
 // router.get('/:fundmeId/options', auth, getFundmeOptions);
 
 // //admin
-// router.post('/fundmes', auth, getFundMeList);
-// router.post('/fundmes/:fundmeId', auth, setFundMeShow);
-// router.delete('/fundmes/:fundmeId', auth, deleteFundMe);
-// router.put('/fundmes/:fundmeId', auth, updateFundMe);
+router.post('/fundmes', auth, getFundMeList);
+router.post('/fundmes/:fundmeId', auth, setFundMeShow);
+router.delete('/fundmes/:fundmeId', auth, deleteFundme);
+router.put('/fundmes/:fundmeId', auth, updateFundMe);
 // router.delete('/fundmes/:fundmeId/options/:optionId', auth, deleteOption);
 router.get('/voters/:fundmeId', auth, getFundmeOptions)
 export default router;

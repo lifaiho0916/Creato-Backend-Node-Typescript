@@ -74,7 +74,7 @@ export const saveFanwall = async (req: Request, res: Response) => {
                         });
 
                         await transactionAdmin.save();
-
+                        
                         const transactionUser = new AdminUserTransaction({
                             description: 4,
                             from: "DAREME",
@@ -180,7 +180,7 @@ export const saveFanwall = async (req: Request, res: Response) => {
 
                         const transactionAdmin = new AdminUserTransaction({
                             description: 4,
-                            from: "DAREME",
+                            from: "FUNDME",
                             to: "ADMIN",
                             fundme: fundme._id,
                             user: userId,
@@ -192,7 +192,7 @@ export const saveFanwall = async (req: Request, res: Response) => {
 
                         const transactionUser = new AdminUserTransaction({
                             description: 4,
-                            from: "DAREME",
+                            from: "FUNDME",
                             to: "USER",
                             user: userId,
                             fundme: fundme._id,
@@ -230,7 +230,7 @@ export const saveFanwall = async (req: Request, res: Response) => {
                         await DareMe.findByIdAndUpdate(itemId, { wallet: 0 });
                         const transactionAdmin = new AdminUserTransaction({
                             description: 4,
-                            from: "DAREME",
+                            from: "FUNDME",
                             to: "ADMIN",
                             fundme: fundme._id,
                             donuts: fundme.wallet / 100 * 10,
@@ -239,7 +239,7 @@ export const saveFanwall = async (req: Request, res: Response) => {
                         await transactionAdmin.save();
                         const transactionUser = new AdminUserTransaction({
                             description: 4,
-                            from: "DAREME",
+                            from: "FUNDME",
                             to: "USER",
                             user: userId,
                             fundme: fundme._id,
