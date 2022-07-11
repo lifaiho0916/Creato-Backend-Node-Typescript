@@ -10,15 +10,15 @@ import jwt from "jsonwebtoken";
 import Mixpanel from "mixpanel";
 import CONSTANT from "../utils/constant";
 
-const mixpanel = Mixpanel.init(CONSTANT.MIXPANEL_TOKEN_DEV);
-var mixpanel_importer = Mixpanel.init(CONSTANT.MIXPANEL_TOKEN_DEV, {
-    secret: CONSTANT.MIXPANEL_API_SECRET_DEV
-});
-
-// const mixpanel = Mixpanel.init(CONSTANT.MIXPANEL_TOKEN_LIVE);
-// var mixpanel_importer = Mixpanel.init(CONSTANT.MIXPANEL_TOKEN_LIVE, {
-//     secret: CONSTANT.MIXPANEL_API_SECRET_LIVE
+// const mixpanel = Mixpanel.init(CONSTANT.MIXPANEL_TOKEN_DEV);
+// var mixpanel_importer = Mixpanel.init(CONSTANT.MIXPANEL_TOKEN_DEV, {
+//     secret: CONSTANT.MIXPANEL_API_SECRET_DEV
 // });
+
+const mixpanel = Mixpanel.init(CONSTANT.MIXPANEL_TOKEN_LIVE);
+var mixpanel_importer = Mixpanel.init(CONSTANT.MIXPANEL_TOKEN_LIVE, {
+    secret: CONSTANT.MIXPANEL_API_SECRET_LIVE
+});
 
 function calcTime() {
     var d = new Date();
