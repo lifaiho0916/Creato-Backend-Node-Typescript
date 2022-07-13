@@ -20,31 +20,29 @@ function calcTime() {
 export const buyDonuts = async (req: Request, res: Response) => {
     try {
         const { token, item, userId } = req.body;
-        console.log("token...........", token)
         let charge = { status: 'requested' };
         const user = await User.findById(userId);
-        const amount = Math.round(item.donutCount / 10 * (100 - item.discountedPercent) / 100 * 100);
+        let amount = item.donutCount / 10 * (100 - item.discountedPercent) / 100 * 100;
+        amount += amount * 0.034 + 30;
 
         const customer = await stripe.customers.create({
             email: user.email,
             name: user.name,
             //source: token.id
         })
-        
+
         await stripe.charges.create({
-            amount: amount,
+            amount: Number(Math.round(amount)),
             currency: 'usd',
             source: token.id,
             description: `Property: ${item.property}, DonutCount: ${item.donutCount}, DiscountedPercent: ${item.discountedPercent} Email: ${user.email} Name: ${user.name}`,
         }).then(result => {
             charge = result;
         }).catch(err => {
-            console.log("charge........", err)
             return res.status(200).json({ error: true, msg: err.raw.message })
         })
 
         if (charge.status === 'succeeded') {
-
             const wallet = user.wallet + item.donutCount;
             const updatedUser = await User.findByIdAndUpdate(user.id, { wallet: wallet }, { new: true });
             req.body.io.to(user.email).emit("wallet_change", wallet);
@@ -76,7 +74,6 @@ export const buyDonuts = async (req: Request, res: Response) => {
             return res.status(200).json({ success: true, user: payload });
         } else return res.status(200).json({ success: true, result: charge })
     } catch (err) {
-        console.log("total........", err)
         return res.status(200).json({ error: true, msg: 'Payment is failed!' });
     }
 }

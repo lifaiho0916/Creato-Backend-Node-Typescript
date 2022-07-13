@@ -19,6 +19,7 @@ import fanwall from "./Routes/api/fanwall";
 import payment from "./Routes/api/payment";
 import notification from "./Routes/api/notification";
 import transaction from "./Routes/api/transaction";
+import tip from "./Routes/api/tip";
 
 const app = express();
 const PORT = 5000;
@@ -26,7 +27,7 @@ const PORT = 5000;
 app.use(cors());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-app.use(express.static('client/build'));
+// app.use(express.static('client/build'));
 
 const server = http.createServer(app);
 
@@ -60,12 +61,13 @@ app.use("/api/fanwall", fanwall);
 app.use("/api/payment", payment);
 app.use("/api/notification", notification);
 app.use("/api/transactions", transaction);
-app.use(express.static('../dist'));
+app.use("/api/tip", tip);
+// app.use(express.static('../dist'));
 app.use(express.static("public"));
 
-app.get('*', (req, res) => {
-	res.sendFile(path.join(__dirname, '../dist', 'index.html'));
-});
+// app.get('*', (req, res) => {
+	// res.sendFile(path.join(__dirname, '../dist', 'index.html'));
+// });
 
 server.listen(PORT, () => {
   console.log(`The Server is up and running on PORT ${PORT}`);
