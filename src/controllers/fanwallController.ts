@@ -7,6 +7,7 @@ import DareMe from "../models/DareMe";
 import FundMe from "../models/FundMe";
 import Option from "../models/Option";
 import User from "../models/User";
+import Tip from "../models/Tip";
 import AdminWallet from "../models/AdminWallet";
 import AdminUserTransaction from '../models/AdminUserTransaction';
 import { getTransactions } from './transactionController';
@@ -34,7 +35,7 @@ export const saveFanwall = async (req: Request, res: Response) => {
                 }
                 if (fanwall.cover && fanwall.cover !== cover) {
                     const filePath = "public/" + fanwall.cover;
-                    if(fs.existsSync(filePath)) {
+                    if (fs.existsSync(filePath)) {
                         fs.unlink(filePath, (err) => {
                             if (err) throw err;
                         });
@@ -74,7 +75,7 @@ export const saveFanwall = async (req: Request, res: Response) => {
                         });
 
                         await transactionAdmin.save();
-                        
+
                         const transactionUser = new AdminUserTransaction({
                             description: 4,
                             from: "DAREME",
@@ -141,7 +142,7 @@ export const saveFanwall = async (req: Request, res: Response) => {
                 const fanwall = await Fanwall.findById(fanwallId);
                 if (fanwall.video && fanwall.video !== video) {
                     const filePath = "public/" + fanwall.video;
-                    if(fs.existsSync(filePath)) {
+                    if (fs.existsSync(filePath)) {
                         fs.unlink(filePath, (err) => {
                             if (err) throw err;
                         });
@@ -149,7 +150,7 @@ export const saveFanwall = async (req: Request, res: Response) => {
                 }
                 if (fanwall.cover && fanwall.cover !== cover) {
                     const filePath = "public/" + fanwall.cover;
-                    if(fs.existsSync(filePath)) {
+                    if (fs.existsSync(filePath)) {
                         fs.unlink(filePath, (err) => {
                             if (err) throw err;
                         });
@@ -494,7 +495,14 @@ export const getFanwallsByPersonalUrl = async (req: Request, res: Response) => {
                 userFanwall: true
             });
         });
-        return res.status(200).json({ success: true, fanwalls: resFanwalls });
+
+        //get Tips data.
+        const tips = await Tip.find({ user: user._id }).populate({ path: 'tipper', select: { 'avatar': 1, 'name': 1 } });
+        let resultTips = tips.sort((first: any, second: any) => {
+            return first.tip < second.tip ? 1 : first.tip > second.tip ? -1 :
+                first.date > second.date ? -1 : first.date < second.date ? 1 : 0;
+        });
+        return res.status(200).json({ success: true, fanwalls: resFanwalls, tips: resultTips });
     } catch (err) {
         console.log(err);
     }

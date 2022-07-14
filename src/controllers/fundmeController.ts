@@ -62,7 +62,7 @@ export const saveFundme = async (req: Request, res: Response) => {
             fundme.published = false;
             const newFundme = new FundMe(fundme);
             const resNewFundme = await newFundme.save();
-            
+
             const resultFundme = await FundMe.findById(resNewFundme._id);
             if (resultFundme) res.status(200).json({ success: true, fundme: resultFundme });
         }
@@ -259,7 +259,7 @@ export const fundCreator = async (req: Request, res: Response) => {
             return res.status(200).json({ success: true, fundme: daremePayload, user: payload });
         }
 
-        
+
         //new notification
         // const new_notification = new Notification({
         //     sender: userId,
@@ -277,74 +277,18 @@ export const fundCreator = async (req: Request, res: Response) => {
     }
 }
 
-// export const checkOngoingfundmes = async (io: any) => {
-//     try {
-//         const fundmes = await FundMe.find({ published: true }).where('finished').equals(false).populate({ path: 'options.option', model: Option });
-//         for (const fundme of fundmes) {
-//             if ((new Date(fundme.date).getTime() + 1000 * 3600 * 24 * fundme.deadline) < new Date(calcTime()).getTime()) {
-//                 await FundMe.findByIdAndUpdate(fundme._id, { finished: true }, { new: true });
-//                 const fundmeInfo = await FundMe.findById(fundme._id).populate({ path: 'options.option' });
-//                 const options = fundmeInfo.options.filter((option: any) => option.option.status === 1);
-//                 const maxOption: any = options.reduce((prev: any, current: any) => (prev.option.donuts > current.option.donuts) ? prev : current);
-//                 const filters = options.filter((option: any) => option.option.donuts === maxOption.option.donuts);
-//                 if (filters.length === 1) {
-//                     let resFundme = await FundMe.findById(fundme._id);
-//                     let minusDonuts = 0;
-//                     await Option.findByIdAndUpdate(maxOption.option._id, { win: true }, { new: true });
-//                     const noWinOptions = options.filter((option: any) => option.option.donuts !== maxOption.option.donuts);
-//                     for (const option of noWinOptions) {
-//                         for (const vote of option.option.voteInfo) {
-//                             if ((option.option.writer + "") !== (vote.voter + "")) {
-//                                 const voter = await User.findById(vote.voter);
-//                                 let wallet = voter.wallet + vote.donuts;
-//                                 await User.findByIdAndUpdate(vote.voter, { wallet: wallet });
-//                                 io.to(voter.email).emit("wallet_change", wallet);
-//                                 minusDonuts += vote.donuts;
-//                                 const transaction = new AdminUserTransaction({
-//                                     description: 7,
-//                                     from: "FUNDME",
-//                                     to: "USER",
-//                                     user: vote.voter,
-//                                     fundme: fundme._id,
-//                                     donuts: vote.donuts,
-//                                     date: calcTime()
-//                                 });
-//                                 await transaction.save();
-//                             }
-//                         }
-//                     }
-//                     await FundMe.findByIdAndUpdate(fundme._id, { wallet: resFundme.wallet - minusDonuts });
-//                 }
-//             }
-//             const calc = (new Date(fundme.date).getTime() + 1000 * 3600 * 24 * (fundme.deadline - 1)) - new Date(calcTime()).getTime();
-//             if (calc >= -60000 && calc <= 0) {
-//                 const options = fundme.options.filter((option: any) => option.option.status === 0);
-//                 for (const option of options) {
-//                     await Option.findByIdAndUpdate(option.option._id, { status: -1 });
-//                     const user = await User.findById(option.option.writer);
-//                     await User.findByIdAndUpdate(user._id, { wallet: user.wallet + option.option.donuts });
-//                     const resFundme = await FundMe.findById(fundme._id);
-//                     await FundMe.findByIdAndUpdate(fundme._id, { wallet: resFundme.wallet - option.option.donuts });
-//                     io.to(user.email).emit("wallet_change", user.wallet + option.option.donuts);
-//                     if (option.option.donuts > 0) {
-//                         const transaction = new AdminUserTransaction({
-//                             description: 7,
-//                             from: "FUNDME",
-//                             to: "USER",
-//                             user: user._id,
-//                             fundme: fundme._id,
-//                             donuts: option.option.donuts,
-//                             date: calcTime()
-//                         });
-//                         await transaction.save();
-//                     }
-//                 }
-//             }
-//         }
-//     } catch (err: any) {
-//         console.log(err);
-//     }
-// }
+export const checkOngoingfundmes = async (io: any) => {
+    try {
+        const fundmes = await FundMe.find({ published: true }).where('finished').equals(false);
+        for (const fundme of fundmes) {
+            if ((new Date(fundme.date).getTime() + 1000 * 3600 * 24 * fundme.deadline) < new Date(calcTime()).getTime()) {
+                await FundMe.findByIdAndUpdate(fundme._id, { finished: true }, { new: true });
+            }
+        }
+    } catch (err: any) {
+        console.log(err);
+    }
+}
 
 // const coverStorage = multer.diskStorage({
 //     destination: "./public/uploads/cover/",
@@ -596,7 +540,7 @@ export const getFundmeResult = async (req: Request, res: Response) => {
         const { fundmeId } = req.params;
         const fundme = await FundMe.findById(fundmeId)
             .populate([{ path: 'owner', select: { 'avatar': 1, 'personalisedUrl': 1, 'name': 1, '_id': 1 } }, { path: 'voteInfo.voter', select: { '_id': 0, 'name': 1, 'canFee': 1 } }])
-            .select({ 'finished': 0, 'published': 0,'__v': 0 });
+            .select({ 'finished': 0, 'published': 0, '__v': 0 });
         if (fundme) {
             const fanwall = await Fanwall.findOne({ fundme: fundme._id }).select({ '__v': 0, 'data': 0 });
             // let donuts = 0;

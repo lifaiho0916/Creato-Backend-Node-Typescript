@@ -9,7 +9,7 @@ import * as path from 'path';
 
 //Routers
 import { checkOngoingdaremes } from "./controllers/daremeController";
-// import { checkOngoingfundmes } from "./controllers/fundmeController";
+import { checkOngoingfundmes } from "./controllers/fundmeController";
 import { newNotification } from "./controllers/notificationController";
 
 import auth from "./Routes/api/auth";
@@ -74,6 +74,7 @@ server.listen(PORT, () => {
 });
 
 cron.schedule("* * * * *",() => checkOngoingdaremes(io));
+cron.schedule("* * * * *",() => checkOngoingfundmes(io))
 // cron.schedule("* * * * *",() => checkOngoingfundmes(io));
 cron.schedule("59 23 * * *", ()=> newNotification(io), {
   scheduled: true,
