@@ -353,9 +353,9 @@ export const getDaremesByPersonalUrl = async (req: Request, res: Response) => {
 
         userDaremes.filter((userDareme: any) => userDareme.finished === true).forEach((dareme: any) => {
             let donuts = 0;
-            dareme.options.forEach((option: any) => { 
-                if (option.option.status === 1) 
-                    donuts += option.option.donuts; 
+            dareme.options.forEach((option: any) => {
+                if (option.option.status === 1)
+                    donuts += option.option.donuts;
                 if (option.option.voters !== 0) {
                     option.option.voteInfo.forEach((voter: any) => {
                         if (voter.donuts > 1)
@@ -499,7 +499,7 @@ export const getDaremesByPersonalUrl = async (req: Request, res: Response) => {
             return new Date(first.date).getTime() > new Date(second.date).getTime() ? 1 : new Date(first.date).getTime() < new Date(second.date).getTime() ? -1 : 0;
         }).forEach((fundme: any) => {
             let isWritter = false;
-            for (let i = 0 ; i < fundme.voteInfo.length ; i++) {
+            for (let i = 0; i < fundme.voteInfo.length; i++) {
                 if (fundme.voteInfo[i].voter + "" === user._id + "") {
                     isWritter = true;
                     break;
@@ -537,13 +537,41 @@ export const getDaremesByPersonalUrl = async (req: Request, res: Response) => {
 
 export const getDaremesOngoing = async (req: Request, res: Response) => {
     try {
-        const daremes = await DareMe.find({ published: true, show: true })
+        const daremeFunc = DareMe.find({ published: true, show: true })
             .populate({ path: 'owner', select: { 'avatar': 1, 'personalisedUrl': 1, 'name': 1 } })
             .populate({ path: 'options.option', select: { 'donuts': 1, '_id': 0, 'status': 1 } })
             .select({ 'published': 0, 'wallet': 0, '__v': 0 });
-        const fundmes = await FundMe.find({ published: true, show: true })
+        const fundmeFunc = FundMe.find({ published: true, show: true })
             .populate({ path: 'owner', select: { 'avatar': 1, 'personalisedUrl': 1, 'name': 1 } })
-            .select({ 'published': 0,'__v': 0 });
+            .select({ 'published': 0, '__v': 0 });
+        const fanwallFunc = Fanwall.find({ posted: true })
+            .populate({ path: 'writer', select: { 'avatar': 1, 'personalisedUrl': 1, 'name': 1 } })
+            .populate([
+                {
+                    path: 'dareme',
+                    Model: DareMe,
+                    select: {
+                        'title': 1, 'deadline': 1, 'category': 1
+                    },
+                    populate: {
+                        path: 'options.option',
+                        model: Option
+                    }
+                },
+                {
+                    path: 'fundme',
+                    Model: FundMe,
+                    select: {
+                        'title': 1, 'deadline': 1, 'category': 1, 'goal': 1, 'wallet': 1,
+                    }
+                }
+            ]);
+
+        const result = await Promise.all([daremeFunc, fundmeFunc, fanwallFunc]);
+        const daremes = result[0];
+        const fundmes = result[1];
+        const fanwalls = result[2];
+
         let resItems = <Array<any>>[];
         for (const dareme of daremes) {
             let donuts = 0;
@@ -572,7 +600,7 @@ export const getDaremesOngoing = async (req: Request, res: Response) => {
             resItems.push({
                 id: fundme._id,
                 type: 'fundme',
-                goal:fundme.goal,
+                goal: fundme.goal,
                 owner: fundme.owner,
                 title: fundme.title,
                 deadline: fundme.deadline,
@@ -587,30 +615,6 @@ export const getDaremesOngoing = async (req: Request, res: Response) => {
                 time: (new Date(fundme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * fundme.deadline) / (24 * 3600 * 1000),
             });
         }
-
-        const fanwalls = await Fanwall.find({ posted: true })
-            .populate({ path: 'writer', select: { 'avatar': 1, 'personalisedUrl': 1, 'name': 1 } })
-            .populate([
-                {
-                    path: 'dareme',
-                    Model: DareMe,
-                    select: {
-                        'title': 1, 'deadline': 1, 'category': 1
-                    },
-                    populate: {
-                        path: 'options.option',
-                        model: Option
-                    }
-                },
-                {
-                    path: 'fundme',
-                    Model: FundMe,
-                    select: {
-                        'title': 1, 'deadline': 1, 'category': 1, 'goal': 1, 'wallet': 1,
-                    }
-                }
-            ]);
-
 
         let resFanwalls = <Array<any>>[];
         fanwalls.sort((first: any, second: any) => {
@@ -656,7 +660,7 @@ export const getDaremesOngoing = async (req: Request, res: Response) => {
                 });
             }
         });
-        
+
         return res.status(200).json({ daremes: resItems, fanwalls: resFanwalls });
     } catch (err) {
         console.log(err);
@@ -738,7 +742,7 @@ export const getDaremeResult = async (req: Request, res: Response) => {
 
 export const getOptionsFromUserId = async (req: Request, res: Response) => {
     try {
-        
+
     } catch (e) {
         console.log(e);
     }
