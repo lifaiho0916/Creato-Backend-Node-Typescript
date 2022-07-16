@@ -446,26 +446,127 @@ export const getFanwallsByPersonalUrl = async (req: Request, res: Response) => {
         const user = await User.findOne({ personalisedUrl: url });
         const rewardFanwalls = await Fanwall.find({ posted: true }).where('owner').ne(user._id)
             .populate({ path: 'writer', select: { 'avatar': 1, 'name': 1, 'personalisedUrl': 1 } })
-            .populate({
-                path: 'dareme',
-                Model: DareMe,
-                populate: {
-                    path: 'options.option',
-                    model: Option
+            .populate([
+                {
+                    path: 'dareme',
+                    Model: DareMe,
+                    populate: [
+                        {
+                            path: 'options.option',
+                            model: Option
+                        },
+                        {
+                            path: 'owner',
+                            model: User
+                        }
+                    ]
                 },
-                select: { 'options': 1, 'title': 1, 'category': 1 }
-            });
+                {
+                    path: 'fundme',
+                    Model: FundMe,
+                    populate: [
+                        {
+                            path: 'owner',
+                            model: User
+                        }
+                    ]
+                }]
+            );
         rewardFanwalls.forEach((fanwall: any) => {
-            const options = fanwall.dareme.options.filter((option: any) => option.option.win === true);
-            let isVoted = false;
-            for (let i = 0; i < options[0].option.voteInfo.length; i++) {
-                const voteInfo = options[0].option.voteInfo[i];
-                if ((voteInfo.voter + "" === user.id + "") && voteInfo.donuts >= 50) {
-                    isVoted = true;
-                    break;
+            if (fanwall.dareme) {
+                const options = fanwall.dareme.options.filter((option: any) => option.option.win === true);
+                let isVoted = false;
+                for (let i = 0; i < options[0].option.voteInfo.length; i++) {
+                    const voteInfo = options[0].option.voteInfo[i];
+                    if ((voteInfo.voter + "" === user.id + "") && voteInfo.donuts >= 50) {
+                        isVoted = true;
+                        break;
+                    }
+                }
+                if (isVoted) {
+                    let totalDonuts = 0;
+                    fanwall.dareme.options.forEach((option: any) => { if (option.option.status === 1) totalDonuts += option.option.donuts; });
+                    resFanwalls.push({
+                        id: fanwall._id,
+                        date: fanwall.date,
+                        writer: fanwall.writer,
+                        video: fanwall.video,
+                        cover: fanwall.cover,
+                        sizeType: fanwall.sizeType,
+                        message: fanwall.message,
+                        embedUrl: fanwall.embedUrl,
+                        unlocks: fanwall.unlocks,
+                        dareme: {
+                            title: fanwall.dareme.title,
+                            category: fanwall.dareme.category,
+                            donuts: totalDonuts,
+                            options: fanwall.dareme.options
+                        },
+                        userFanwall: false
+                    });
+                }
+            } else {
+                let isVoted = false;
+                for (let i = 0; i < fanwall.fundme.voteInfo.length; i++) {
+                    const voteInfo = fanwall.fundme.voteInfo[i];
+                    if ((voteInfo.voter + "" === user.id + "") && voteInfo.donuts >= 50) {
+                        isVoted = true;
+                        break;
+                    }
+                }
+                if (isVoted) {
+                    resFanwalls.push({
+                        id: fanwall._id,
+                        date: fanwall.date,
+                        writer: fanwall.writer,
+                        video: fanwall.video,
+                        cover: fanwall.cover,
+                        sizeType: fanwall.sizeType,
+                        message: fanwall.message,
+                        embedUrl: fanwall.embedUrl,
+                        unlocks: fanwall.unlocks,
+                        dareme: {
+                            title: fanwall.fundme.title,
+                            category: fanwall.fundme.category,
+                            donuts: fanwall.fundme.wallet,
+                            options: null
+                        },
+                        userFanwall: false
+                    });
                 }
             }
-            if (isVoted) {
+        });
+
+        const fanwalls = await Fanwall.find({ writer: user._id, posted: true })
+            .populate({ path: 'writer', select: { 'avatar': 1, 'name': 1, 'personalisedUrl': 1 } })
+            .populate([
+                {
+                    path: 'dareme',
+                    Model: DareMe,
+                    populate: [
+                        {
+                            path: 'options.option',
+                            model: Option
+                        },
+                        {
+                            path: 'owner',
+                            model: User
+                        }
+                    ]
+                },
+                {
+                    path: 'fundme',
+                    Model: FundMe,
+                    populate: [
+                        {
+                            path: 'owner',
+                            model: User
+                        }
+                    ]
+                }]
+            );
+        fanwalls.forEach((fanwall: any) => {
+            if (fanwall.dareme) {
                 let totalDonuts = 0;
                 fanwall.dareme.options.forEach((option: any) => { if (option.option.status === 1) totalDonuts += option.option.donuts; });
                 resFanwalls.push({
@@ -484,43 +585,28 @@ export const getFanwallsByPersonalUrl = async (req: Request, res: Response) => {
                         donuts: totalDonuts,
                         options: fanwall.dareme.options
                     },
-                    userFanwall: false
+                    userFanwall: true
+                });
+            } else {
+                resFanwalls.push({
+                    id: fanwall._id,
+                    date: fanwall.date,
+                    writer: fanwall.writer,
+                    video: fanwall.video,
+                    cover: fanwall.cover,
+                    sizeType: fanwall.sizeType,
+                    message: fanwall.message,
+                    embedUrl: fanwall.embedUrl,
+                    unlocks: fanwall.unlocks,
+                    dareme: {
+                        title: fanwall.fundme.title,
+                        category: fanwall.fundme.category,
+                        donuts: fanwall.fundme.wallet,
+                        options: null
+                    },
+                    userFanwall: true
                 });
             }
-        });
-
-        const fanwalls = await Fanwall.find({ writer: user._id, posted: true })
-            .populate({ path: 'writer', select: { 'avatar': 1, 'name': 1, 'personalisedUrl': 1 } })
-            .populate({
-                path: 'dareme',
-                Model: DareMe,
-                populate: {
-                    path: 'options.option',
-                    model: Option
-                },
-                select: { 'options': 1, 'title': 1, 'category': 1 }
-            });
-        fanwalls.forEach((fanwall: any) => {
-            let totalDonuts = 0;
-            fanwall.dareme.options.forEach((option: any) => { if (option.option.status === 1) totalDonuts += option.option.donuts; });
-            resFanwalls.push({
-                id: fanwall._id,
-                date: fanwall.date,
-                writer: fanwall.writer,
-                video: fanwall.video,
-                cover: fanwall.cover,
-                sizeType: fanwall.sizeType,
-                message: fanwall.message,
-                embedUrl: fanwall.embedUrl,
-                unlocks: fanwall.unlocks,
-                dareme: {
-                    title: fanwall.dareme.title,
-                    category: fanwall.dareme.category,
-                    donuts: totalDonuts,
-                    options: fanwall.dareme.options
-                },
-                userFanwall: true
-            });
         });
 
         //get Tips data.
