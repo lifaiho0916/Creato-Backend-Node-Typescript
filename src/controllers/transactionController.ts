@@ -15,44 +15,44 @@ function calcTime() {
 export const getTransactions = async (req: Request, res: Response) => {
     try {
         const { type } = req.params;
-        const adminWallet = await AdminWallet.findOne({ admin: "ADMIN" });
+        const result = await Promise.all([
+            AdminWallet.findOne({ admin: "ADMIN" }),
+            User.find({ role: "USER" }),
+            DareMe.find({}),
+            FundMe.find({}),
+            User.find({}).select({ 'name': 1, 'role': 1 })
+        ]);
+        const adminWallet = result[0];
         const adminDonuts = adminWallet.wallet; //admin' s donuts
-        const users = await User.find({ role: "USER" });
+        const users = result[1];
         let userDonuts = 0.0;
 
         users.forEach((user: any) => {
             userDonuts += user.wallet;
         });
 
-        const daremes = await DareMe.find({});
+        const daremes = result[2];
         let daremeDonuts = 0.0;
         daremes.forEach((dareme: any) => {
             daremeDonuts += dareme.wallet;
         });
-        const fundmes = await FundMe.find({});
+        const fundmes = result[3];
         let fundmeDonuts = 0.0;
         fundmes.forEach((fundme: any) => {
             fundmeDonuts += fundme.wallet;
         })
 
-        const resUsers = await User.find({}).select({ 'name': 1, 'role': 1 });
-        let transactionsDareme: any = [];
-        let transactionsFundme: any = [];
+        const resUsers = result[4];
+        let transactions: any = [];
         if (Number(type) === 0) {
-            transactionsDareme = await AdminUserTransaction.find({ $or: [{ from: 'ADMIN' }, { to: 'ADMIN' }, { description: 1 }] })
-                .populate({ path: 'user' }).populate({ path: 'dareme' });
-            transactionsFundme = await AdminUserTransaction.find({ $or: [{ from: 'ADMIN' }, { to: 'ADMIN' }, { description: 1 }] })
-                .populate({ path: 'user' }).populate({ path: 'fundme' });
+            transactions = await AdminUserTransaction.find({ $or: [{ from: 'ADMIN' }, { to: 'ADMIN' }, { description: 1 }] })
+                .populate({ path: 'user' }).populate({ path: 'dareme' }).populate({ path: 'fundme' });
         }
         if (Number(type) === 1) {
-            transactionsDareme = await AdminUserTransaction.find({ $or: [{ from: 'USER' }, { to: 'USER' }, { description: 3 }] })
-                .populate({ path: 'user' }).populate({ path: 'dareme' });
-            transactionsFundme = await AdminUserTransaction.find({ $or: [{ from: 'USER' }, { to: 'USER' }, { description: 3 }] })
-                .populate({ path: 'user' }).populate({ path: 'fundme' });
+            transactions = await AdminUserTransaction.find({ $or: [{ from: 'USER' }, { to: 'USER' }, { description: 3 }] })
+                .populate({ path: 'user' }).populate({ path: 'dareme' }).populate({ path: 'fundme' });
         }
-        
-        const transactions = transactionsDareme.concat(transactionsFundme);
-
+        console.log(transactions)
         return res.status(200).json({
             success: true,
             users: resUsers,

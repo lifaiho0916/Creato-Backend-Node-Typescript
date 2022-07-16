@@ -1,6 +1,5 @@
 import monogoose, { Schema } from 'mongoose';
 import User from './User';
-import Option from './Option';
 
 const FundMeSchema = new monogoose.Schema({
     owner: {
@@ -39,6 +38,10 @@ const FundMeSchema = new monogoose.Schema({
     wallet: {
         type: Number,
         default: 0
+    },
+    empty: {
+        type: Boolean,
+        default: false,
     },
     cover: {
         type: String

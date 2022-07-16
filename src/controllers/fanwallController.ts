@@ -22,7 +22,7 @@ function calcTime() {
 export const saveFanwall = async (req: Request, res: Response) => {
     try {
         const { fanwallId, userId, itemId, video, message, posted, embedUrl, cover, sizeType, type } = req.body;
-        if (type == 'dareme') {
+        if (type === 'dareme') {
             if (fanwallId) {
                 const fanwall = await Fanwall.findById(fanwallId);
                 if (fanwall.video && fanwall.video !== video) {
@@ -137,7 +137,7 @@ export const saveFanwall = async (req: Request, res: Response) => {
                 }
                 return res.status(200).json({ success: true });
             }
-        } else if (type == 'fundme') {
+        } else if (type === 'fundme') {
             if (fanwallId) {
                 const fanwall = await Fanwall.findById(fanwallId);
                 if (fanwall.video && fanwall.video !== video) {
@@ -171,20 +171,21 @@ export const saveFanwall = async (req: Request, res: Response) => {
 
                 if (posted) {
                     const fundme = await FundMe.findById(itemId).populate({ path: 'writer' });
-                    if (fundme && fundme.wallet > 0) {
+                    if (fundme && fundme.empty === false) {
                         const user = await User.findById(userId);
                         await User.findByIdAndUpdate(userId, { wallet: user.wallet + fundme.wallet * 0.9 });
                         req.body.io.to(user.email).emit("wallet_change", user.wallet + fundme.wallet * 0.9);
                         const adminWallet = await AdminWallet.findOne({ admin: "ADMIN" });
                         await AdminWallet.findOneAndUpdate({ admin: "ADMIN" }, { wallet: adminWallet.wallet + fundme.wallet * 0.1 });
                         req.body.io.to("ADMIN").emit("wallet_change", adminWallet.wallet + fundme.wallet * 0.1);
+                        await FundMe.findByIdAndUpdate(itemId, { empty: true });
 
                         const transactionAdmin = new AdminUserTransaction({
                             description: 4,
                             from: "FUNDME",
                             to: "ADMIN",
                             fundme: fundme._id,
-                            user: userId,
+                            // user: userId,
                             donuts: fundme.wallet * 0.1,
                             date: calcTime()
                         });
@@ -202,7 +203,6 @@ export const saveFanwall = async (req: Request, res: Response) => {
                         });
 
                         await transactionUser.save();
-                        await FundMe.findByIdAndUpdate(itemId, { wallet: 0 });
                     }
                 }
                 return res.status(200).json({ success: true });
@@ -221,14 +221,15 @@ export const saveFanwall = async (req: Request, res: Response) => {
                 await newFanwall.save();
                 if (posted) {
                     const fundme = await FundMe.findById(itemId).populate({ path: 'writer' });
-                    if (fundme && fundme.wallet > 0) {
+                    if (fundme && fundme.empty === false) {
                         const user = await User.findById(userId);
                         await User.findByIdAndUpdate(userId, { wallet: user.wallet + fundme.wallet / 100.0 * 90 });
                         req.body.io.to(user.email).emit("wallet_change", user.wallet + fundme.wallet / 100.0 * 90);
                         const adminWallet = await AdminWallet.findOne({ admin: "ADMIN" });
                         await AdminWallet.findOneAndUpdate({ admin: "ADMIN" }, { wallet: adminWallet.wallet + fundme.wallet / 100.0 * 10 });
                         req.body.io.to("ADMIN").emit("wallet_change", adminWallet.wallet + fundme.wallet / 100.0 * 10);
-                        await DareMe.findByIdAndUpdate(itemId, { wallet: 0 });
+                        await FundMe.findByIdAndUpdate(itemId, { empty: true });
+
                         const transactionAdmin = new AdminUserTransaction({
                             description: 4,
                             from: "FUNDME",
@@ -237,6 +238,7 @@ export const saveFanwall = async (req: Request, res: Response) => {
                             donuts: fundme.wallet / 100 * 10,
                             date: calcTime()
                         });
+
                         await transactionAdmin.save();
                         const transactionUser = new AdminUserTransaction({
                             description: 4,
@@ -400,11 +402,36 @@ export const getPostDetail = async (req: Request, res: Response) => {
                 topFuns: voteInfo.slice(0, 3),
             });
         } else {
+            let voteInfo: {
+                id: any,
+                name: string,
+                donuts: number,
+                date: Date,
+                avatar: string,
+                personalisedUrl: string
+            }[] = [];
+
+            const fundme = await FundMe.findById(fanwall.fundme._id)
+                .populate({
+                    path: 'voteInfo.voter',
+                    Model: User
+                });
+
+            fundme.voteInfo.forEach((vote: any) => {
+                voteInfo.push({
+                    id: vote.voter._id,
+                    donuts: vote.donuts + vote.canFree ? 0 : 1,
+                    name: vote.voter.name,
+                    avatar: vote.voter.avatar,
+                    date: vote.date,
+                    personalisedUrl: vote.voter.personalisedUrl
+                });
+            });
+
             return res.status(200).json({
                 success: true,
                 fanwall: fanwall,
-                goal: fanwall.fundme.goal,
-                wallet: fanwall.fundme.wallet,
+                topFuns: voteInfo.slice(0, 3),
             })
         }
     } catch (err) {
@@ -521,15 +548,33 @@ export const likeFanwall = async (req: Request, res: Response) => {
             await Fanwall.findByIdAndUpdate(fanwallId, { likes: likes });
             const resFanwall = await Fanwall.findById(fanwallId)
                 .populate({ path: 'writer', select: { 'avatar': 1, 'name': 1, 'personalisedUrl': 1 } })
-                .populate({
-                    path: 'dareme',
-                    Model: DareMe,
-                    populate: {
-                        path: 'options.option',
-                        model: Option
+                .populate([
+                    {
+                        path: 'dareme',
+                        Model: DareMe,
+                        populate: [
+                            {
+                                path: 'options.option',
+                                model: Option
+                            },
+                            {
+                                path: 'owner',
+                                model: User
+                            }
+                        ]
                     },
-                    select: { 'options': 1, 'title': 1, 'category': 1 }
-                });
+                    {
+                        path: 'fundme',
+                        Model: FundMe,
+                        populate: [
+                            {
+                                path: 'owner',
+                                model: User
+                            }
+                        ]
+                    }
+                ]);
+
             return res.status(200).json({ success: true, fanwall: resFanwall });
         }
     } catch (err) {
@@ -572,21 +617,33 @@ export const unlockFanwall = async (req: Request, res: Response) => {
         await Fanwall.findByIdAndUpdate(fanwallId, { unlocks: unlocks });
         const resFanwall = await Fanwall.findById(fanwallId)
             .populate({ path: 'writer', select: { 'avatar': 1, 'name': 1, 'personalisedUrl': 1 } })
-            .populate([{
-                path: 'dareme',
-                Model: DareMe,
-                populate: {
-                    path: 'options.option',
-                    model: Option
+            .populate([
+                {
+                    path: 'dareme',
+                    Model: DareMe,
+                    populate: [
+                        {
+                            path: 'options.option',
+                            model: Option
+                        },
+                        {
+                            path: 'owner',
+                            model: User
+                        }
+                    ]
                 },
-                select: { 'options': 1, 'title': 1, 'category': 1 }
-            },
-            {
-                path: 'fundme',
-                Model: FundMe,
-                select: { 'goal': 1, 'title': 1, 'category': 1, 'wallet': 1 }
-            }
+                {
+                    path: 'fundme',
+                    Model: FundMe,
+                    populate: [
+                        {
+                            path: 'owner',
+                            model: User
+                        }
+                    ]
+                }
             ]);
+
         return res.status(200).json({ success: true, fanwall: resFanwall, user: payload });
     } catch (err) {
         console.log(err);
@@ -644,7 +701,6 @@ export const modityIssue = async (req: Request, res: Response) => {
 
 export const getTransaction = async (req: Request, res: Response) => {
     const { transactionId } = req.params;
-    console.log(transactionId);
     const transaction = await AdminUserTransaction.findById(transactionId);
     if (transaction) {
         return res.status(200).json(transaction);
