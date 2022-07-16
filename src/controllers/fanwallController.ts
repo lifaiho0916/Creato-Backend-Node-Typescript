@@ -306,7 +306,6 @@ export const fanwallGetByFundMeId = async (req: Request, res: Response) => {
     }
 }
 
-
 export const getPostDetail = async (req: Request, res: Response) => {
     try {
         const { fanwallId } = req.params;
@@ -526,10 +525,13 @@ export const getFanwallsByPersonalUrl = async (req: Request, res: Response) => {
                         embedUrl: fanwall.embedUrl,
                         unlocks: fanwall.unlocks,
                         dareme: {
+                            goal: fanwall.fundme.goal,
                             title: fanwall.fundme.title,
                             category: fanwall.fundme.category,
                             donuts: fanwall.fundme.wallet,
-                            options: null
+                            options: null,
+                            voteInfo: fanwall.fundme.voteInfo,
+                            reward: fanwall.fundme.reward
                         },
                         userFanwall: false
                     });
@@ -599,10 +601,13 @@ export const getFanwallsByPersonalUrl = async (req: Request, res: Response) => {
                     embedUrl: fanwall.embedUrl,
                     unlocks: fanwall.unlocks,
                     dareme: {
+                        goal: fanwall.fundme.goal,
                         title: fanwall.fundme.title,
                         category: fanwall.fundme.category,
                         donuts: fanwall.fundme.wallet,
-                        options: null
+                        options: null,
+                        voteInfo: fanwall.fundme.voteInfo,
+                        reward: fanwall.fundme.reward
                     },
                     userFanwall: true
                 });

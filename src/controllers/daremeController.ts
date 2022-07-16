@@ -562,7 +562,7 @@ export const getDaremesOngoing = async (req: Request, res: Response) => {
                     path: 'fundme',
                     Model: FundMe,
                     select: {
-                        'title': 1, 'deadline': 1, 'category': 1, 'goal': 1, 'wallet': 1,
+                        'title': 1, 'deadline': 1, 'category': 1, 'goal': 1, 'wallet': 1, 'voteInfo': 1, 'reward': 1
                     }
                 }
             ]);
@@ -624,38 +624,41 @@ export const getDaremesOngoing = async (req: Request, res: Response) => {
             if (fanwall.dareme) {
                 fanwall.dareme.options.forEach((option: any) => { if (option.option.status === 1) totalDonuts += option.option.donuts; });
                 resFanwalls.push({
-                    'id': fanwall._id,
-                    'date': fanwall.date,
-                    'writer': fanwall.writer,
-                    'video': fanwall.video,
-                    'sizeType': fanwall.sizeType,
-                    'cover': fanwall.cover,
-                    'message': fanwall.message,
-                    'embedUrl': fanwall.embedUrl,
-                    'unlocks': fanwall.unlocks,
-                    'dareme': {
-                        'title': fanwall.dareme.title,
-                        'options': fanwall.dareme.options,
-                        'category': fanwall.dareme.category,
-                        'donuts': totalDonuts
+                    id: fanwall._id,
+                    date: fanwall.date,
+                    writer: fanwall.writer,
+                    video: fanwall.video,
+                    sizeType: fanwall.sizeType,
+                    cover: fanwall.cover,
+                    message: fanwall.message,
+                    embedUrl: fanwall.embedUrl,
+                    unlocks: fanwall.unlocks,
+                    dareme: {
+                        title: fanwall.dareme.title,
+                        options: fanwall.dareme.options,
+                        category: fanwall.dareme.category,
+                        donuts: totalDonuts
                     }
                 });
-            } else if (fanwall.fundme) {
+            } else {
                 resFanwalls.push({
-                    'id': fanwall._id,
-                    'date': fanwall.date,
-                    'writer': fanwall.writer,
-                    'video': fanwall.video,
-                    'sizeType': fanwall.sizeType,
-                    'cover': fanwall.cover,
-                    'message': fanwall.message,
-                    'embedUrl': fanwall.embedUrl,
-                    'unlocks': fanwall.unlocks,
-                    'dareme': {
-                        'title': fanwall.fundme.title,
-                        'category': fanwall.fundme.category,
-                        'donuts': fanwall.fundme.wallet,
-                        'goal': fanwall.fundme.goal,
+                    id: fanwall._id,
+                    date: fanwall.date,
+                    writer: fanwall.writer,
+                    video: fanwall.video,
+                    sizeType: fanwall.sizeType,
+                    cover: fanwall.cover,
+                    message: fanwall.message,
+                    embedUrl: fanwall.embedUrl,
+                    unlocks: fanwall.unlocks,
+                    dareme: {
+                        goal: fanwall.fundme.goal,
+                        title: fanwall.fundme.title,
+                        category: fanwall.fundme.category,
+                        donuts: fanwall.fundme.wallet,
+                        options: null,
+                        voteInfo: fanwall.fundme.voteInfo,
+                        reward: fanwall.fundme.reward
                     }
                 });
             }
