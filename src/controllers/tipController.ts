@@ -94,17 +94,11 @@ export const buyDonutForTip = async (req: Request, res: Response) => {
         let amount = item.donutCount / 10 * (100 - item.discountedPercent) / 100 * 100;
         amount += amount * 0.034 + 30;
 
-        const customer = await stripe.customers.create({
-            email: "",
-            name: nickname,
-            //source: token.id
-        })
-
         await stripe.charges.create({
             amount: Number(Math.round(amount)),
             currency: 'usd',
             source: token.id,
-            description: `Property: ${item.property}, DonutCount: ${item.donutCount}, DiscountedPercent: ${item.discountedPercent} Email: , Name: ${nickname}`,
+            description: `Property: ${item.property}, DonutCount: ${item.donutCount}, DiscountedPercent: ${item.discountedPercent}`,
         }).then(result => {
             charge = result;
         }).catch(err => {

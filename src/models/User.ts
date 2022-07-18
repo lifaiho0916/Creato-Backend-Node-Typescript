@@ -50,6 +50,9 @@ const UserSchema = new mongoose.Schema({
       type: mongoose.Schema.Types.ObjectId,
     },
   ],
+  stripeID: {
+    type: String
+  }
 });
 
 export default mongoose.model("users", UserSchema);
