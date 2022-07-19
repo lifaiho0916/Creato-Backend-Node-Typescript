@@ -40,7 +40,7 @@ app.use((req: Request, res: Response, next) => {
 
 //DB connection
 mongoose.connect(
-  "mongodb://localhost:27017/dareme",
+  "mongodb://127.0.0.1:27017/dareme",
   {
     useNewUrlParser: true,
     useUnifiedTopology: true,
@@ -66,17 +66,17 @@ app.use("/api/tip", tip);
 app.use(express.static("public"));
 
 // app.get('*', (req, res) => {
-	// res.sendFile(path.join(__dirname, '../dist', 'index.html'));
+// res.sendFile(path.join(__dirname, '../dist', 'index.html'));
 // });
 
 server.listen(PORT, () => {
   console.log(`The Server is up and running on PORT ${PORT}`);
 });
 
-cron.schedule("* * * * *",() => checkOngoingdaremes(io));
-cron.schedule("* * * * *",() => checkOngoingfundmes(io))
+cron.schedule("* * * * *", () => checkOngoingdaremes(io));
+cron.schedule("* * * * *", () => checkOngoingfundmes(io));
 // cron.schedule("* * * * *",() => checkOngoingfundmes(io));
-cron.schedule("59 23 * * *", ()=> newNotification(io), {
+cron.schedule("59 23 * * *", () => newNotification(io), {
   scheduled: true,
   timezone: "Asia/Hong_Kong",
 });
