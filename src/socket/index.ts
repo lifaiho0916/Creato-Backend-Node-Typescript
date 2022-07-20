@@ -16,11 +16,8 @@ const SocketServer = (server: any) => {
       const userRooms = [email, "USER"];
       if(role === "ADMIN") socket.join(adminRooms);
       else socket.join(userRooms);
-      console.log(`${email}-${role} joined. `)
     });
-    socket.on('disconnect', () => {
-      console.log('disconnected');
-    });
+    socket.on('disconnect', () => {});
   });
   return io;
 };

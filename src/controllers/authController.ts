@@ -105,6 +105,7 @@ export const googleSignup = async (req: Request, res: Response) => {
                         wallet: 30,
                         role: role,
                         password: hash,
+                        language: userData.lang,
                         date: calcTime()
                     });
                     newUser.save().then((user: any) => {
@@ -241,6 +242,7 @@ export const facebookSignup = async (req: Request, res: Response) => {
                         wallet: 30,
                         role: role,
                         password: hash,
+                        language: userData.lang,
                         date: calcTime()
                     });
                     newUser.save().then((user: any) => {
