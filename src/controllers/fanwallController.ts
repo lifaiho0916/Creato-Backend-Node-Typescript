@@ -615,7 +615,7 @@ export const getFanwallsByPersonalUrl = async (req: Request, res: Response) => {
         });
 
         //get Tips data.
-        const tips = await Tip.find({ user: user._id }).populate({ path: 'tipper', select: { 'avatar': 1, 'name': 1 } });
+        const tips = await Tip.find({ user: user._id, show: true }).populate({ path: 'tipper', select: { 'avatar': 1, 'name': 1 } });
         let resultTips = tips.sort((first: any, second: any) => {
             return first.tip < second.tip ? 1 : first.tip > second.tip ? -1 :
                 first.date > second.date ? -1 : first.date < second.date ? 1 : 0;

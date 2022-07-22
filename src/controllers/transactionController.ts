@@ -20,7 +20,13 @@ export const getTransactions = async (req: Request, res: Response) => {
             User.find({ role: "USER" }),
             DareMe.find({}),
             FundMe.find({}),
-            User.find({}).select({ 'name': 1, 'role': 1 })
+            User.find({}).select({ 'name': 1, 'role': 1 }),
+            Number(type) === 0 ?
+                AdminUserTransaction.find({ $or: [{ from: 'ADMIN' }, { to: 'ADMIN' }, { description: 1 }] })
+                    .populate([{ path: 'user' }, { path: 'user1' }, { path: 'dareme' }, { path: 'fundme' }])
+                :
+                AdminUserTransaction.find({ $or: [{ from: 'USER' }, { to: 'USER' }, { description: 3 }] })
+                    .populate([{ path: 'user' }, { path: 'user1' }, { path: 'dareme' }, { path: 'fundme' }])
         ]);
         const adminWallet = result[0];
         const adminDonuts = adminWallet.wallet; //admin' s donuts
@@ -43,16 +49,8 @@ export const getTransactions = async (req: Request, res: Response) => {
         })
 
         const resUsers = result[4];
-        let transactions: any = [];
-        if (Number(type) === 0) {
-            transactions = await AdminUserTransaction.find({ $or: [{ from: 'ADMIN' }, { to: 'ADMIN' }, { description: 1 }] })
-                .populate({ path: 'user' }).populate({ path: 'dareme' }).populate({ path: 'fundme' });
-        }
-        if (Number(type) === 1) {
-            transactions = await AdminUserTransaction.find({ $or: [{ from: 'USER' }, { to: 'USER' }, { description: 3 }] })
-                .populate({ path: 'user' }).populate({ path: 'dareme' }).populate({ path: 'fundme' });
-        }
-        console.log(transactions)
+        const transactions = result[5];
+        
         return res.status(200).json({
             success: true,
             users: resUsers,

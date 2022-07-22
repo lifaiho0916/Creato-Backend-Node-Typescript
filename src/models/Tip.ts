@@ -19,6 +19,10 @@ const TipSchema = new mongoose.Schema({
     type: Schema.Types.ObjectId,
     ref: User
   },
+  show: {
+    type: Boolean,
+    default: true
+  },
   date: {
     type: Date,
     default: Date.now()

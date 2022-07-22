@@ -17,6 +17,13 @@ const AdminUserTransaction = new mongoose.Schema({
         type: Schema.Types.ObjectId,
         ref: User
     },
+    user1: {
+        type: Schema.Types.ObjectId,
+        ref: User
+    },
+    nickname: {
+        type: String
+    },
     dareme: {
         type: Schema.Types.ObjectId,
         ref: DareMe

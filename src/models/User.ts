@@ -52,6 +52,10 @@ const UserSchema = new mongoose.Schema({
   ],
   stripeID: {
     type: String
+  },
+  tipFunction: {
+    type: Boolean,
+    default: true,
   }
 });
 
