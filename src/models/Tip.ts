@@ -24,8 +24,7 @@ const TipSchema = new mongoose.Schema({
     default: true
   },
   date: {
-    type: Date,
-    default: Date.now()
+    type: Date
   }
 });
 

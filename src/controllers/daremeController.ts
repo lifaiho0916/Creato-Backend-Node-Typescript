@@ -90,8 +90,14 @@ export const checkOngoingdaremes = async (io: any) => {
 export const publishDareme = async (req: Request, res: Response) => {
     try {
         const { userId } = req.body;
-        const dareme = await DareMe.findOne({ owner: userId, published: false });
-        const updatedDareme = await DareMe.findByIdAndUpdate(dareme._id, { published: true, date: calcTime() }, { new: true });
+        const result = await Promise.all([
+            User.findById(userId),
+            DareMe.findOne({ owner: userId, published: false })
+        ]);
+        if (result[0].tipFunction === false) {
+            await User.findByIdAndUpdate(userId, { tipFunction: true });
+        }
+        const updatedDareme = await DareMe.findByIdAndUpdate(result[1]._id, { published: true, date: calcTime() }, { new: true });
 
         // const admins = await User.find({ role: 'ADMIN' });
         // let new_notification = new Notification({
@@ -159,26 +165,26 @@ export const saveDareme = async (req: Request, res: Response) => {
                 });
             }
             if (resDareme.options.length && resDareme.options[0].option._id !== null) {
-                await Option.findByIdAndUpdate(resDareme.options[0].option._id, { title: dareme.options[0].option.title });
-                await Option.findByIdAndUpdate(resDareme.options[1].option._id, { title: dareme.options[1].option.title });
+                await Promise.all([
+                    Option.findByIdAndUpdate(resDareme.options[0].option._id, { title: dareme.options[0].option.title }),
+                    Option.findByIdAndUpdate(resDareme.options[1].option._id, { title: dareme.options[1].option.title })
+                ]);
             } else {
                 let newOptions: Array<any> = [];
                 if (dareme.options.length) {
-                    let resOption = null;
-                    let tempOption = new Option({
+                    const tempOption1 = new Option({
                         writer: userId,
                         title: dareme.options[0].option.title,
                         status: 1
                     });
-                    resOption = await tempOption.save();
-                    newOptions.push({ option: resOption._id });
-                    tempOption = new Option({
+                    const tempOption2 = new Option({
                         writer: userId,
                         title: dareme.options[1].option.title,
                         status: 1
                     });
-                    resOption = await tempOption.save();
-                    newOptions.push({ option: resOption._id });
+                    const resOptions = await Promise.all([tempOption1.save(), tempOption2.save()])
+                    newOptions.push({ option: resOptions[0]._id });
+                    newOptions.push({ option: resOptions[1]._id });
                 }
                 dareme.options = newOptions;
             }
@@ -197,21 +203,19 @@ export const saveDareme = async (req: Request, res: Response) => {
         } else {
             let newOptions: Array<any> = [];
             if (dareme.options.length) {
-                let resOption = null;
-                let tempOption = new Option({
+                const tempOption1 = new Option({
                     writer: userId,
                     title: dareme.options[0].option.title,
                     status: 1
                 });
-                resOption = await tempOption.save();
-                newOptions.push({ option: resOption._id });
-                tempOption = new Option({
+                const tempOption2 = new Option({
                     writer: userId,
                     title: dareme.options[1].option.title,
                     status: 1
                 });
-                resOption = await tempOption.save();
-                newOptions.push({ option: resOption._id });
+                const resOptions = await Promise.all([tempOption1.save(), tempOption2.save()])
+                newOptions.push({ option: resOptions[0]._id });
+                newOptions.push({ option: resOptions[1]._id });
             }
             dareme.options = newOptions;
             dareme.published = false;
@@ -298,7 +302,7 @@ export const getDaremesByPersonalUrl = async (req: Request, res: Response) => {
     try {
         const { url } = req.body;
         let results: Array<object> = [];
-        const user = await User.findOne({ personalisedUrl: url }).select({ 'name': 1, 'avatar': 1, 'personalisedUrl': 1, 'categories': 1, 'subscribed_users': 1 });
+        const user = await User.findOne({ personalisedUrl: url }).select({ 'name': 1, 'avatar': 1, 'personalisedUrl': 1, 'categories': 1, 'subscribed_users': 1, 'tipFunction': 1 });
         const userDaremes = await DareMe.find({ owner: user._id, published: true, show: true })
             .populate({ path: 'owner', select: { 'name': 1, 'avatar': 1, 'personalisedUrl': 1, 'status': 1 } })
             .populate({ path: 'options.option', select: { 'donuts': 1, '_id': 0, 'status': 1, 'voters': 1, 'voteInfo': 1 } })

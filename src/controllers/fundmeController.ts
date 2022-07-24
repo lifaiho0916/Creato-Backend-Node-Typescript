@@ -97,10 +97,15 @@ export const deleteFundme = async (req: Request, res: Response) => {
 export const publishFundme = async (req: Request, res: Response) => {
     try {
         const { userId } = req.body;
-        const fundme = await FundMe.findOne({ owner: userId, published: false });
-        const updatedFundme = await FundMe.findByIdAndUpdate(fundme._id, { published: true, date: calcTime() }, { new: true });
+        const result = await Promise.all([
+            User.findById(userId),
+            FundMe.findOne({ owner: userId, published: false })
+        ]);
 
-        const admins = await User.find({ role: 'ADMIN' });
+        if (result[0].tipFunction === false) await User.findByIdAndUpdate(userId, { tipFunction: true });
+        const updatedFundme = await FundMe.findByIdAndUpdate(result[1]._id, { published: true, date: calcTime() }, { new: true });
+
+        // const admins = await User.find({ role: 'ADMIN' });
         // let new_notification = new Notification({
         //     sender: admins[0],
         //     receivers: [userId],

@@ -12,7 +12,8 @@ import {
     changeVisible,
     getTipData,
     updateTip,
-    deleteTip
+    deleteTip,
+    getActiveTipUsers
 } from '../../controllers/tipController';
 
 router.post("/", tipUser);
@@ -24,5 +25,6 @@ router.post('/profile/changevisible', auth, changeVisible);
 router.get('/:id', auth, getTipData);
 router.post('/:id/update', auth, updateTip);
 router.delete('/:id', auth, deleteTip);
+router.get('/users/tipactive', auth, getActiveTipUsers);
 
 export default router;

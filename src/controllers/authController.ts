@@ -28,7 +28,7 @@ export const googleSignin = async (req: Request, res: Response) => {
         const userData = req.body;
         const email = userData.email;
         const browser = userData.browser;
-        
+
         const user = await User.findOne({ email: email });
         const adminDonuts = await AdminWallet.findOne({ admin: "ADMIN" });
         if (user) {
@@ -388,10 +388,12 @@ export const getUsersList = async (req: Request, res: Response) => {
     try {
         const { search } = req.body;
         if (search === "") {
-            const users = await User.find().select({ 'personalisedUrl': 1, 'date': 1, 'email': 1, 'name': 1, 'categories': 1, 'wallet': 1 });
+            const users = await User.find().select({ 'personalisedUrl': 1, 'date': 1, 'email': 1, 'name': 1, 'categories': 1, 'wallet': 1, 'tipFunction': 1, 'role': 1 });
+            var dareFuncs: Array<any> = [];
+            users.forEach((user: any) => { dareFuncs.push(DareMe.find({ owner: user._id })) });
+            const resultDaremes = await Promise.all(dareFuncs);
             var result: Array<object> = [];
-            for (const user of users) {
-                const daremes = await DareMe.find({ owner: user._id });
+            users.forEach((user: any, index: any) => {
                 result.push({
                     id: user._id,
                     personalisedUrl: user.personalisedUrl,
@@ -400,9 +402,11 @@ export const getUsersList = async (req: Request, res: Response) => {
                     name: user.name,
                     categories: user.categories,
                     wallet: user.wallet,
-                    daremeCnt: daremes.length
+                    role: user.role,
+                    daremeCnt: resultDaremes[index].length,
+                    tipFunction: user.tipFunction
                 });
-            }
+            });
         } else {
             const users = await User.find({
                 $or:
@@ -411,21 +415,25 @@ export const getUsersList = async (req: Request, res: Response) => {
                         { email: { $regex: search, $options: "i" } },
                         { personalisedUrl: { $regex: search, $options: "i" } }
                     ]
-            }).select({ 'personalisedUrl': 1, 'date': 1, 'email': 1, 'name': 1, 'categories': 1, 'wallet': 1 });
+            }).select({ 'personalisedUrl': 1, 'date': 1, 'email': 1, 'name': 1, 'categories': 1, 'wallet': 1, 'tipFunction': 1, 'role': 1 });
+            var dareFuncs: Array<any> = [];
+            users.forEach((user: any) => { dareFuncs.push(DareMe.find({ owner: user._id })) });
+            const resultDaremes = await Promise.all(dareFuncs);
             var result: Array<object> = [];
-            for (const user of users) {
-                const daremes = await DareMe.find({ owner: user._id });
+            users.forEach((user: any, index: any) => {
                 result.push({
                     id: user._id,
                     personalisedUrl: user.personalisedUrl,
                     date: user.date,
                     email: user.email,
                     name: user.name,
+                    role: user.role,
                     categories: user.categories,
                     wallet: user.wallet,
-                    daremeCnt: daremes.length
+                    daremeCnt: resultDaremes[index].length,
+                    tipFunction: user.tipFunction
                 });
-            }
+            });
         }
         return res.status(200).json({ success: true, users: result });
     } catch (err) {

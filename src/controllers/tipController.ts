@@ -32,14 +32,16 @@ export const tipUser = async (req: Request, res: Response) => {
             const tipperWallet = walletState[0].wallet - tip;
             const receiverWallet = walletState[1].wallet + (tip * 95 / 100);
             const adminWallet = walletState[2].wallet + (tip * 5 / 100);
+
+            const currentTime = calcTime();
+
             const newTip = new Tip({
                 tipper: tipper,
                 tip: tip,
                 message: message,
-                user: user
+                user: user,
+                date: currentTime,
             });
-
-            const currentTime = calcTime();
 
             const newTransaction1 = new AdminUserTransaction({
                 description: 8,
@@ -95,14 +97,16 @@ export const tipUser = async (req: Request, res: Response) => {
 
             const receiverWallet = walletState[0].wallet + (tip * 95 / 100);
             const adminWallet = walletState[1].wallet + (tip * 5 / 100);
+
+            const currentTime = calcTime();
+
             const newTip = new Tip({
                 nickname: tipper,
                 tip: tip,
                 message: message,
-                user: user
+                user: user,
+                date: currentTime
             });
-
-            const currentTime = calcTime();
 
             const newTransaction1 = new AdminUserTransaction({
                 description: 8,
@@ -291,6 +295,16 @@ export const deleteTip = async (req: Request, res: Response) => {
         await Tip.findByIdAndDelete(id);
 
         return res.status(200).json({ success: true });
+    } catch (err) {
+        console.log(err);
+    }
+}
+
+export const getActiveTipUsers = async (req: Request, res: Response) => {
+    try {
+        const users = await User.find({ tipFunction: true });
+
+        return res.status(200).json({ success: true, users: users });
     } catch (err) {
         console.log(err);
     }
