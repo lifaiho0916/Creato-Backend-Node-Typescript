@@ -251,7 +251,7 @@ export const fundCreator = async (req: Request, res: Response) => {
                 new_notification: updatedUser.new_notification,
             };
             const transaction = new AdminUserTransaction({
-                description: 6,
+                description: 5,
                 from: "USER",
                 to: "FUNDME",
                 user: userId,

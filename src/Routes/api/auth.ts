@@ -14,7 +14,8 @@ import {
     setLanguage,
     getUsersList,
     getExistName,
-    getExistURL
+    getExistURL,
+    getUserFromUrl
 } from '../../controllers/authController';
 
 router.post("/googleSignin", googleSignin);
@@ -27,6 +28,7 @@ router.post('/profile/save', auth ,saveProfileInfo);
 router.post('/setting/lang', auth, setLanguage);
 router.post('/exist_name', auth ,getExistName);
 router.post('/exist_url', auth ,getExistURL);
+router.post('/userFromUrl', auth, getUserFromUrl);
 
 router.post('/users', auth, getUsersList);
 

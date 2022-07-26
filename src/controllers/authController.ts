@@ -460,3 +460,13 @@ export const getExistURL = async (req: Request, res: Response) => {
         console.log(err);
     }
 }
+
+export const getUserFromUrl = async (req: Request, res: Response) => {
+    try {
+        const { url } = req.body;
+        const user = await User.find({ personalisedUrl: url });
+        return res.status(200).json({ success: true, user: user });
+    } catch (err) {
+        console.log(err);
+    }
+}
