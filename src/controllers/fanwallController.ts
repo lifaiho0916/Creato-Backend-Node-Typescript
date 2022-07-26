@@ -366,7 +366,7 @@ export const getPostDetail = async (req: Request, res: Response) => {
                 option.option.voteInfo.forEach((vote: any) => {
                     let filters = voteInfo.filter((voteinfo: any) => (voteinfo.id + "" === vote.voter._id + ""));
                     if (filters.length) {
-                        let foundIndex = voteInfo.findIndex(vote => (vote.id + "" === filters[0].id + ""));
+                        let foundIndex = voteInfo.findIndex(voteIn => (voteIn.id + "" === filters[0].id + ""));
                         let item = {
                             id: filters[0].id,
                             donuts: filters[0].donuts + vote.donuts,
@@ -426,6 +426,8 @@ export const getPostDetail = async (req: Request, res: Response) => {
                     personalisedUrl: vote.voter.personalisedUrl
                 });
             });
+
+            voteInfo.sort((first: any, second: any) => { return first.donuts < second.donuts ? 1 : first.donuts > second.donuts ? -1 : 0 });
 
             return res.status(200).json({
                 success: true,

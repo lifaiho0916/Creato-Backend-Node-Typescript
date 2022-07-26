@@ -28,7 +28,7 @@ router.post('/profile/save', auth ,saveProfileInfo);
 router.post('/setting/lang', auth, setLanguage);
 router.post('/exist_name', auth ,getExistName);
 router.post('/exist_url', auth ,getExistURL);
-router.post('/userFromUrl', auth, getUserFromUrl);
+router.post('/userFromUrl', getUserFromUrl);
 
 router.post('/users', auth, getUsersList);
 
