@@ -10,7 +10,6 @@ import User from "../models/User";
 import Tip from "../models/Tip";
 import AdminWallet from "../models/AdminWallet";
 import AdminUserTransaction from '../models/AdminUserTransaction';
-import { getTransactions } from './transactionController';
 
 function calcTime() {
     var d = new Date();
@@ -678,33 +677,66 @@ export const likeFanwall = async (req: Request, res: Response) => {
 export const unlockFanwall = async (req: Request, res: Response) => {
     try {
         const { userId, fanwallId } = req.body;
-        const user = await User.findById(userId);
-        let wallet = user.wallet - 450;
-        const updatedUser = await User.findByIdAndUpdate(userId, { wallet: wallet }, { new: true });
-        req.body.io.to(user.email).emit("wallet_change", wallet);
         const fanwall = await Fanwall.findById(fanwallId);
-        const owner = await User.findById(fanwall.writer);
-        wallet = owner.wallet + 450;
-        await User.findByIdAndUpdate(owner._id, { wallet: wallet });
+        const result = await Promise.all([
+            User.findById(userId),
+            User.findById(fanwall.writer),
+            AdminWallet.findOne({ admin: "ADMIN" })
+        ]);
+
+        const userWallet = result[0].wallet - 500;
+        const ownerWallet = result[1].wallet + 450;
+        const adminWallet = result[2].wallet + 50;
+        
+        const result1 = await Promise.all([
+            User.findByIdAndUpdate(userId, { wallet: userWallet }, { new: true }),
+            User.findByIdAndUpdate(fanwall.writer, { wallet: ownerWallet }),
+            AdminWallet.findOneAndUpdate({ admin: "ADMIN" }, { wallet: adminWallet })
+        ]);
+
+        req.body.io.to(result[0].email).emit("wallet_change", userWallet);
+        req.body.io.to(result[1].email).emit("wallet_change", ownerWallet);
+        req.body.io.to("ADMIN").emit("wallet_change", adminWallet);
 
         const payload = {
-            id: updatedUser._id,
-            name: updatedUser.name,
-            avatar: updatedUser.avatar,
-            role: updatedUser.role,
-            email: updatedUser.email,
-            wallet: updatedUser.wallet,
-            personalisedUrl: updatedUser.personalisedUrl,
-            language: updatedUser.language,
-            category: updatedUser.categories,
-            new_notification: updatedUser.new_notification,
+            id: result1[0]._id,
+            name: result1[0].name,
+            avatar: result1[0].avatar,
+            role: result1[0].role,
+            email: result1[0].email,
+            wallet: result1[0].wallet,
+            personalisedUrl: result1[0].personalisedUrl,
+            language: result1[0].language,
+            category: result1[0].categories,
+            new_notification: result1[0].new_notification,
         };
 
-        req.body.io.to(owner.email).emit("wallet_change", wallet);
-        const adminDonuts = await AdminWallet.findOne({ admin: "ADMIN" });
-        wallet = adminDonuts.wallet + 50;
-        await AdminWallet.findOneAndUpdate({ admin: "ADMIN" }, { wallet: wallet });
-        req.body.io.to("ADMIN").emit("wallet_change", wallet);
+        const currentTime = calcTime();
+
+        const newTransaction1 = new AdminUserTransaction({
+            description: 10,
+            from: 'USER',
+            to: 'ADMIN',
+            user: userId,
+            donuts: 50,
+            date: currentTime
+        });
+
+        const newTransaction2 = new AdminUserTransaction({
+            description: 10,
+            from: 'USER',
+            to: 'USER',
+            user: userId,
+            user1: fanwall.writer,
+            donuts: 450,
+            date: currentTime
+        });
+
+        await Promise.all([
+            newTransaction1.save(),
+            newTransaction2.save()
+        ])
+
         let unlocks = fanwall.unlocks;
         unlocks.push({ unlocker: userId });
         await Fanwall.findByIdAndUpdate(fanwallId, { unlocks: unlocks });
