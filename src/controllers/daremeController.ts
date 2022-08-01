@@ -809,6 +809,14 @@ export const supportCreator = async (req: Request, res: Response) => {
                 date: calcTime()
             });
             await transaction.save();
+
+            addNewNotification(req.body.io, {
+                section: 'Ongoing DareMe',
+                trigger: 'After voter voted in DareMe (non-Superfans)',
+                dareme: updatedDareme,
+                option: option,
+                voterId: userId
+            });
             return res.status(200).json({ success: true, dareme: resDareme, option: optionNew });
         }
 
@@ -838,6 +846,14 @@ export const supportCreator = async (req: Request, res: Response) => {
                 date: calcTime()
             });
             await transaction.save();
+
+            addNewNotification(req.body.io, {
+                section: 'Ongoing DareMe',
+                trigger: 'After voter voted in DareMe (Superfans)',
+                dareme: updatedDareme,
+                option: option,
+                voterId: userId
+            });
             return res.status(200).json({ success: true, dareme: resDareme, option: optionNew, user: payload });
         }
 

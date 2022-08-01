@@ -2,6 +2,7 @@ import mongoose, { Schema } from "mongoose";
 import User from "./User";
 import Dareme from "./DareMe";
 import Fundme from "./FundMe";
+import Option from './Option';
 import NotificationType from './NotificationType';
 
 const NotificationSchema = new mongoose.Schema({
@@ -41,6 +42,13 @@ const NotificationSchema = new mongoose.Schema({
     type: Schema.Types.ObjectId,
     ref: Fundme,
   }, 
+  option: {
+    type: Schema.Types.ObjectId,
+    ref: Option
+  },
+  donuts: {
+    type: Number
+  }
 });
 
 export default mongoose.model("notifications", NotificationSchema);

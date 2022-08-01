@@ -20,8 +20,9 @@ export const getNotificationHistory = async (req: Request, res: Response) => {
         { path: 'fundme', select: { title: 1 } },
         { path: 'sender', select: { role: 1, avatar: 1, name: 1 } },
         { path: 'section' },
+        { path: 'option' },
         { path: 'receiverInfo.receiver', select: { name: 1 } }
-      ]).sort({ date: -1 }).select({ receiverInfo: 1, dareme: 1, sender: 1, section: 1, index: 1, date: 1 });
+      ]).sort({ date: -1 }).select({ receiverInfo: 1, dareme: 1, sender: 1, section: 1, index: 1, date: 1, donuts: 1, option: 1 });
 
     let result: Array<any> = [];
 
@@ -30,6 +31,9 @@ export const getNotificationHistory = async (req: Request, res: Response) => {
       if (msg.indexOf('DAREME_TITLE') !== -1) msg = msg.replace('DAREME_TITLE', `<strong>${notification.dareme.title}</strong>`);
       if (msg.indexOf('FUNDME_TITLE') !== -1) msg = msg.replace('FUNDME_TITLE', `<strong>${notification.fundme.title}</strong>`);
       if (msg.indexOf('NAME_OF_OWNER') !== -1) msg = msg.replace('NAME_OF_OWNER', `<strong>${notification.sender.name}</strong>`);
+      if (msg.indexOf('NAME_OF_VOTER') !== -1) msg = msg.replace('NAME_OF_VOTER', `<strong>${notification.sender.name}</strong>`);
+      if (msg.indexOf('NAME_OF_DARE') !== -1) msg = msg.replace('NAME_OF_DARE', `<strong>${notification.option.title}</strong>`);
+      if (msg.indexOf('NUMBER_OF_DONUTS') !== -1) msg = msg.replace('NUMBER_OF_DONUTS', `<strong>${notification.donuts}</strong>`);
 
       for (const resInfo of notification.receiverInfo) {
         result.push({
@@ -60,8 +64,9 @@ export const getNotifications = async (req: Request, res: Response) => {
         { path: 'fundme', select: { title: 1 } },
         { path: 'sender', select: { role: 1, avatar: 1, name: 1 } },
         { path: 'section' },
+        { path: 'option' },
         { path: 'receiverInfo.receiver', select: { name: 1 } }
-      ]).sort({ date: -1 }).select({ receiverInfo: 1, dareme: 1, sender: 1, section: 1, index: 1, date: 1 });
+      ]).sort({ date: -1 }).select({ receiverInfo: 1, dareme: 1, sender: 1, section: 1, index: 1, date: 1, option: 1, donuts: 1 });
 
     let result: Array<any> = [];
 
@@ -70,6 +75,9 @@ export const getNotifications = async (req: Request, res: Response) => {
       if (msg.indexOf('DAREME_TITLE') !== -1) msg = msg.replace('DAREME_TITLE', `<strong>${notification.dareme.title}</strong>`);
       if (msg.indexOf('FUNDME_TITLE') !== -1) msg = msg.replace('FUNDME_TITLE', `<strong>${notification.fundme.title}</strong>`);
       if (msg.indexOf('NAME_OF_OWNER') !== -1) msg = msg.replace('NAME_OF_OWNER', `<strong>${notification.sender.name}</strong>`);
+      if (msg.indexOf('NAME_OF_VOTER') !== -1) msg = msg.replace('NAME_OF_VOTER', `<strong>${notification.sender.name}</strong>`);
+      if (msg.indexOf('NAME_OF_DARE') !== -1) msg = msg.replace('NAME_OF_DARE', `<strong>${notification.option.title}</strong>`);
+      if (msg.indexOf('NUMBER_OF_DONUTS') !== -1) msg = msg.replace('NUMBER_OF_DONUTS', `<strong>${notification.donuts}</strong>`);
 
       const resInfo = notification.receiverInfo.filter((info: any) => (info.receiver._id + '') === (userId + ''));
       result.push({
@@ -185,57 +193,59 @@ export const addNewNotification = async (io: any, data: any) => {
       const user = result[0];
 
       for (const info of type.info) {
-        if (info.trigger === 'After created a DareMe') {
-          /*
-            section: 'Create DareMe',
-            trigger: 'After created a DareMe',
-            dareme: updatedDareme,
-          */
-          if (info.sender === 'Admin' && info.recipient === 'Owner') {
-            const admin = result[1];
+        if (info.auto && info.trigger === data.trigger) {
+          if (info.trigger === 'After created a DareMe') {
+            /*
+              section: 'Create DareMe',
+              trigger: 'After created a DareMe',
+              dareme: updatedDareme,
+            */
+            if (info.sender === 'Admin' && info.recipient === 'Owner') {
+              const admin = result[1];
 
-            const newNotify = new Notification({
-              section: type._id,
-              index: index,
-              sender: admin._id,
-              receiverInfo: [{
-                receiver: user._id
-              }],
-              date: currentTime,
-              dareme: data.dareme._id
-            });
+              const newNotify = new Notification({
+                section: type._id,
+                index: index,
+                sender: admin._id,
+                receiverInfo: [{
+                  receiver: user._id
+                }],
+                date: currentTime,
+                dareme: data.dareme._id
+              });
 
-            notifications.push(newNotify.save());
-            notifyUsers.push(user.email)
-          } else if (info.sender === 'Owner' && info.recipient === 'User') {
-            let rInfo: Array<any> = [];
+              notifications.push(newNotify.save());
+              notifyUsers.push(user.email)
+            } else if (info.sender === 'Owner' && info.recipient === 'User') {
+              let rInfo: Array<any> = [];
 
-            user.subscribed_users.forEach((sUser: any) => {
-              rInfo.push({ receiver: sUser });
-              setUserNotifyTrue.push(User.findByIdAndUpdate(sUser, { new_notification: true }));
-            });
+              user.subscribed_users.forEach((sUser: any) => {
+                rInfo.push({ receiver: sUser });
+                setUserNotifyTrue.push(User.findByIdAndUpdate(sUser, { new_notification: true }));
+              });
 
-            const newNotify = new Notification({
-              section: type._id,
-              index: index,
-              sender: user._id,
-              receiverInfo: rInfo,
-              date: currentTime,
-              dareme: data.dareme._id
-            });
+              const newNotify = new Notification({
+                section: type._id,
+                index: index,
+                sender: user._id,
+                receiverInfo: rInfo,
+                date: currentTime,
+                dareme: data.dareme._id
+              });
 
-            let users: Array<any> = [];
+              let users: Array<any> = [];
 
-            for (const userTemp of user.subscribed_users) users.push(User.findById(userTemp));
-            let userResult = await Promise.all(users);
+              for (const userTemp of user.subscribed_users) users.push(User.findById(userTemp));
+              let userResult = await Promise.all(users);
 
-            notifications.push(newNotify.save());
-            for (const nuser of userResult) notifyUsers.push(nuser.email);
+              notifications.push(newNotify.save());
+              for (const nuser of userResult) notifyUsers.push(nuser.email);
+            }
+
+            Promise.all(setUserNotifyTrue);
+            Promise.all(notifications);
+            for (const notify of notifyUsers) io.to(notify).emit('create_notification');
           }
-
-          Promise.all(setUserNotifyTrue);
-          Promise.all(notifications);
-          for (const notify of notifyUsers) io.to(notify).emit('create_notification');
         }
         index++;
       }
@@ -248,57 +258,197 @@ export const addNewNotification = async (io: any, data: any) => {
       const user = result[0];
 
       for (const info of type.info) {
-        if (info.trigger === 'After created a FundMe') {
-          /*
-            section: 'Create FundMe',
-            trigger: 'After created a FundMe',
-            dareme: updatedFundme,
-          */
-          if (info.sender === 'Admin' && info.recipient === 'Owner') {
-            const admin = result[1];
+        if (info.auto && info.trigger === data.trigger) {
+          if (info.trigger === 'After created a FundMe') {
+            /*
+              section: 'Create FundMe',
+              trigger: 'After created a FundMe',
+              dareme: updatedFundme,
+            */
+            if (info.sender === 'Admin' && info.recipient === 'Owner') {
+              const admin = result[1];
 
-            const newNotify = new Notification({
-              section: type._id,
-              index: index,
-              sender: admin._id,
-              receiverInfo: [{
-                receiver: user._id
-              }],
-              date: currentTime,
-              fundme: data.fundme._id
-            });
+              const newNotify = new Notification({
+                section: type._id,
+                index: index,
+                sender: admin._id,
+                receiverInfo: [{
+                  receiver: user._id
+                }],
+                date: currentTime,
+                fundme: data.fundme._id
+              });
 
-            notifications.push(newNotify.save());
-            notifyUsers.push(user.email)
-          } else if (info.sender === 'Owner' && info.recipient === 'User') {
-            let rInfo: Array<any> = [];
+              notifications.push(newNotify.save());
+              notifyUsers.push(user.email)
+            } else if (info.sender === 'Owner' && info.recipient === 'User') {
+              let rInfo: Array<any> = [];
 
-            user.subscribed_users.forEach((sUser: any) => {
-              rInfo.push({ receiver: sUser });
-              setUserNotifyTrue.push(User.findByIdAndUpdate(sUser, { new_notification: true }));
-            });
+              user.subscribed_users.forEach((sUser: any) => {
+                rInfo.push({ receiver: sUser });
+                setUserNotifyTrue.push(User.findByIdAndUpdate(sUser, { new_notification: true }));
+              });
 
-            const newNotify = new Notification({
-              section: type._id,
-              index: index,
-              sender: user._id,
-              receiverInfo: rInfo,
-              date: currentTime,
-              fundme: data.fundme._id
-            });
+              const newNotify = new Notification({
+                section: type._id,
+                index: index,
+                sender: user._id,
+                receiverInfo: rInfo,
+                date: currentTime,
+                fundme: data.fundme._id
+              });
 
-            let users: Array<any> = [];
+              let users: Array<any> = [];
 
-            for (const userTemp of user.subscribed_users) users.push(User.findById(userTemp));
-            let userResult = await Promise.all(users);
+              for (const userTemp of user.subscribed_users) users.push(User.findById(userTemp));
+              let userResult = await Promise.all(users);
 
-            notifications.push(newNotify.save());
-            for (const nuser of userResult) notifyUsers.push(nuser.email);
+              notifications.push(newNotify.save());
+              for (const nuser of userResult) notifyUsers.push(nuser.email);
+            }
+
+            Promise.all(setUserNotifyTrue);
+            Promise.all(notifications);
+            for (const notify of notifyUsers) io.to(notify).emit('create_notification');
           }
+        }
+        index++;
+      }
+    } else if (data.section === 'Ongoing DareMe') {
+      var index = 0;
+      const result = await Promise.all([
+        User.findById(data.dareme.owner._id),
+        User.findOne({ role: 'ADMIN' })
+      ]);
+      const user = result[0];
 
-          Promise.all(setUserNotifyTrue);
-          Promise.all(notifications);
-          for (const notify of notifyUsers) io.to(notify).emit('create_notification');
+      for (const info of type.info) {
+        if (info.auto && info.trigger === data.trigger) {
+          if (info.trigger === 'After voter voted in DareMe (non-Superfans)') {
+            /*
+              section: 'Ongoing DareMe',
+              trigger: 'After voter voted in DareMe (non-Superfans)',
+              dareme: updatedDareme,
+            */
+            if (info.sender === 'Voter' && info.recipient === 'Owner') {
+              const newNotify = new Notification({
+                section: type._id,
+                index: index,
+                sender: data.voterId,
+                receiverInfo: [{
+                  receiver: user._id
+                }],
+                date: currentTime,
+                dareme: data.dareme._id,
+                option: data.option._id,
+                donuts: 1,
+              });
+
+              notifications.push(newNotify.save());
+              notifyUsers.push(user.email)
+            }
+
+            Promise.all(setUserNotifyTrue);
+            Promise.all(notifications);
+            io.to(user.email).emit('create_notification');
+
+          } else if (info.trigger === 'After voter voted in DareMe (Superfans)') {
+            /*
+              section: 'Ongoing DareMe',
+              trigger: 'After voter voted in DareMe (Superfans)',
+              dareme: updatedDareme,
+            */
+            if (info.sender === 'Voter' && info.recipient === 'Owner') {
+              const newNotify = new Notification({
+                section: type._id,
+                index: index,
+                sender: data.voterId,
+                receiverInfo: [{
+                  receiver: user._id
+                }],
+                date: currentTime,
+                dareme: data.dareme._id,
+                option: data.option._id,
+                donuts: 50,
+              });
+
+              notifications.push(newNotify.save());
+              notifyUsers.push(user.email)
+            }
+
+            Promise.all(setUserNotifyTrue);
+            Promise.all(notifications);
+            io.to(user.email).emit('create_notification');
+
+          }
+        }
+        index++;
+      }
+    } else if (data.section === 'Ongoing FundMe') {
+      var index = 0;
+      const result = await Promise.all([
+        User.findById(data.fundme.owner._id),
+        User.findOne({ role: 'ADMIN' })
+      ]);
+      const user = result[0];
+
+      for (const info of type.info) {
+        if (info.auto && info.trigger === data.trigger) {
+          if (info.trigger === 'After voter voted in FundMe (non-Superfans)') {
+            /*
+              section: 'Ongoing FundMe',
+              trigger: 'After voter voted in FunMe (non-Superfans)',
+              fundme: updatedFundme,
+            */
+            if (info.sender === 'Voter' && info.recipient === 'Owner') {
+              const newNotify = new Notification({
+                section: type._id,
+                index: index,
+                sender: data.voterId,
+                receiverInfo: [{
+                  receiver: user._id
+                }],
+                date: currentTime,
+                fundme: data.fundme._id,
+                donuts: 1,
+              });
+
+              notifications.push(newNotify.save());
+              notifyUsers.push(user.email)
+            }
+
+            Promise.all(setUserNotifyTrue);
+            Promise.all(notifications);
+            io.to(user.email).emit('create_notification');
+
+          } else if (info.trigger === 'After voter voted in FundMe (Superfans)') {
+            /*
+              section: 'Ongoing FundMe',
+              trigger: 'After voter voted in FundMe (Superfans)',
+              fundme: updatedFundme,
+            */
+            if (info.sender === 'Voter' && info.recipient === 'Owner') {
+              const newNotify = new Notification({
+                section: type._id,
+                index: index,
+                sender: data.voterId,
+                receiverInfo: [{
+                  receiver: user._id
+                }],
+                date: currentTime,
+                fundme: data.fundme._id,
+                donuts: data.fundme.reward,
+              });
+
+              notifications.push(newNotify.save());
+              notifyUsers.push(user.email)
+            }
+
+            Promise.all(setUserNotifyTrue);
+            Promise.all(notifications);
+            io.to(user.email).emit('create_notification');
+
+          }
         }
         index++;
       }

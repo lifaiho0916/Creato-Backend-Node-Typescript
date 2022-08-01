@@ -208,6 +208,13 @@ export const fundCreator = async (req: Request, res: Response) => {
                 date: calcTime()
             });
             await transaction.save();
+
+            addNewNotification(req.body.io, {
+                section: 'Ongoing FundMe',
+                trigger: 'After voter voted in FundMe (non-Superfans)',
+                fundme: updateFundme,
+                voterId: userId
+            });
             return res.status(200).json({ success: true, fundme: daremePayload });
         } else {
             const userWallet = user.wallet - amount;
@@ -235,6 +242,13 @@ export const fundCreator = async (req: Request, res: Response) => {
             });
             await transaction.save();
             req.body.io.to(updatedUser.email).emit("wallet_change", updatedUser.wallet);
+
+            addNewNotification(req.body.io, {
+                section: 'Ongoing FundMe',
+                trigger: 'After voter voted in FundMe (Superfans)',
+                fundme: updateFundme,
+                voterId: userId
+            });
             return res.status(200).json({ success: true, fundme: daremePayload, user: payload });
         }
 
