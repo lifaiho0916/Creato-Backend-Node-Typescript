@@ -215,7 +215,9 @@ export const addNewNotification = async (io: any, data: any) => {
               });
 
               notifications.push(newNotify.save());
-              notifyUsers.push(user.email)
+              notifyUsers.push(user.email);
+              setUserNotifyTrue.push(User.findByIdAndUpdate(user._id, { new_notification: true }));
+
             } else if (info.sender === 'Owner' && info.recipient === 'User') {
               let rInfo: Array<any> = [];
 
@@ -280,7 +282,9 @@ export const addNewNotification = async (io: any, data: any) => {
               });
 
               notifications.push(newNotify.save());
-              notifyUsers.push(user.email)
+              notifyUsers.push(user.email);
+              setUserNotifyTrue.push(User.findByIdAndUpdate(user._id, { new_notification: true }));
+
             } else if (info.sender === 'Owner' && info.recipient === 'User') {
               let rInfo: Array<any> = [];
 
@@ -345,7 +349,8 @@ export const addNewNotification = async (io: any, data: any) => {
               });
 
               notifications.push(newNotify.save());
-              notifyUsers.push(user.email)
+              notifyUsers.push(user.email);
+              setUserNotifyTrue.push(User.findByIdAndUpdate(user._id, { new_notification: true }));
             }
 
             Promise.all(setUserNotifyTrue);
@@ -374,12 +379,12 @@ export const addNewNotification = async (io: any, data: any) => {
 
               notifications.push(newNotify.save());
               notifyUsers.push(user.email)
+              setUserNotifyTrue.push(User.findByIdAndUpdate(user._id, { new_notification: true }));
             }
 
             Promise.all(setUserNotifyTrue);
             Promise.all(notifications);
             io.to(user.email).emit('create_notification');
-
           }
         }
         index++;
@@ -414,7 +419,8 @@ export const addNewNotification = async (io: any, data: any) => {
               });
 
               notifications.push(newNotify.save());
-              notifyUsers.push(user.email)
+              notifyUsers.push(user.email);
+              setUserNotifyTrue.push(User.findByIdAndUpdate(user._id, { new_notification: true }));
             }
 
             Promise.all(setUserNotifyTrue);
@@ -441,13 +447,13 @@ export const addNewNotification = async (io: any, data: any) => {
               });
 
               notifications.push(newNotify.save());
-              notifyUsers.push(user.email)
+              notifyUsers.push(user.email);
+              setUserNotifyTrue.push(User.findByIdAndUpdate(user._id, { new_notification: true }));
             }
 
             Promise.all(setUserNotifyTrue);
             Promise.all(notifications);
             io.to(user.email).emit('create_notification');
-
           }
         }
         index++;

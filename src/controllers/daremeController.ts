@@ -673,6 +673,7 @@ export const getDaremeDetails = async (req: Request, res: Response) => {
                 sizeType: dareme.sizeType,
                 options: dareme.options,
                 finished: dareme.finished,
+                show: dareme.show,
                 time: (new Date(dareme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * dareme.deadline + 1000 * 60) / (24 * 3600 * 1000),
             };
             return res.status(200).json({ success: true, dareme: result });
@@ -939,19 +940,6 @@ export const dareCreator = async (req: Request, res: Response) => {
 
     await transaction.save();
 
-    //new notification
-    // const new_notification = new Notification({
-    //     sender: userId,
-    //     receivers: [dareme.owner],
-    //     message: `<strong>"${user.name}"</strong> dared you in <strong>"${dareme.title}"</strong>, check it out.`,
-    //     theme: "New proposed Dare",
-    //     dareme: daremeId,
-    //     type: "ongoing_dareme"
-    // })
-    // await new_notification.save();
-    // req.body.io.to(dareme.owner.email).emit("create_notification");
-    //end
-
     return res.status(200).json({ success: true, option: option, user: payload });
 }
 
@@ -1072,11 +1060,11 @@ export const getDareMeList = async (req: Request, res: Response) => {
         if (search === "") {
             const daremes = await DareMe.find({ 'published': true })
                 .populate({ path: 'owner', select: { 'name': 1, 'categories': 1 } })
-                .select({ 'title': 1, 'category': 1, 'date': 1, 'deadline': 1, 'finished': 1, 'owner': 1, 'show': 1 });
+                .select({ 'title': 1, 'category': 1, 'date': 1, 'deadline': 1, 'finished': 1, 'owner': 1, 'show': 1, 'wallet': 1 });
             var result: Array<object> = [];
             for (const dareme of daremes) {
                 let time = 0.0;
-                if (!dareme.finished) time = (new Date(dareme.date).getTime() - Date.now() + 3600 * 24 * dareme.deadline * 1000) / (1000 * 24 * 3600);
+                if (!dareme.finished) time = (new Date(dareme.date).getTime() - new Date(calcTime()).getTime() + 3600 * 24 * dareme.deadline * 1000) / (1000 * 24 * 3600);
                 result.push({
                     id: dareme._id,
                     date: dareme.date,

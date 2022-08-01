@@ -102,13 +102,13 @@ export const publishFundme = async (req: Request, res: Response) => {
 
         if (result[0].tipFunction === false) await User.findByIdAndUpdate(userId, { tipFunction: true });
         const updatedFundme = await FundMe.findByIdAndUpdate(result[1]._id, { published: true, date: calcTime() }, { new: true });
-        
+
         addNewNotification(req.body.io, {
             section: 'Create FundMe',
             trigger: 'After created a FundMe',
             fundme: updatedFundme,
         });
-    
+
         return res.status(200).json({ success: true });
     } catch (err) {
         console.log(err)
@@ -147,6 +147,7 @@ export const getFundmeDetails = async (req: Request, res: Response) => {
                 sizeType: fundme.sizeType,
                 finished: fundme.finished,
                 voteInfo: fundme.voteInfo,
+                show: fundme.show,
                 time: (new Date(fundme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * fundme.deadline + 1000 * 60) / (24 * 3600 * 1000),
             };
             return res.status(200).json({ success: true, fundme: result });
@@ -251,20 +252,6 @@ export const fundCreator = async (req: Request, res: Response) => {
             });
             return res.status(200).json({ success: true, fundme: daremePayload, user: payload });
         }
-
-
-        //new notification
-        // const new_notification = new Notification({
-        //     sender: userId,
-        //     receivers: [fundme.owner],
-        //     message: `<strong>"${user.name}"</strong> dared you in <strong>"${fundme.title}"</strong>, check it out.`,
-        //     theme: "New proposed Dare",
-        //     fundme: fundmeId,
-        //     type: "ongoing_fundme"
-        // })
-        // await new_notification.save();
-        // req.body.io.to(fundme.owner.email).emit("create_notification");
-        //end
     } catch (err) {
         console.log(err);
     }
@@ -282,42 +269,6 @@ export const checkOngoingfundmes = async (io: any) => {
         console.log(err);
     }
 }
-
-// const coverStorage = multer.diskStorage({
-//     destination: "./public/uploads/cover/",
-//     filename: function (req, file, cb) {
-//         cb(null, "Cover-" + Date.now() + path.extname(file.originalname));
-//     }
-// });
-
-// const uploadCover = multer({
-//     storage: coverStorage,
-//     limits: { fileSize: 30 * 1024 * 1024 },
-// }).single("file");
-
-// export const selectCover = (req: Request, res: Response) => {
-//     uploadCover(req, res, () => {
-//         res.status(200).json({ success: true, path: "uploads/cover/" + req.file?.filename });
-//     });
-// }
-
-// const teaserStorage = multer.diskStorage({
-//     destination: "./public/uploads/teaser/",
-//     filename: function (req, file, cb) {
-//         cb(null, "Teaser-" + Date.now() + path.extname(file.originalname));
-//     }
-// });
-
-// const uploadTeaser = multer({
-//     storage: teaserStorage,
-//     limits: { fileSize: 30 * 1024 * 1024 },
-// }).single("file");
-
-// export const uploadFile = (req: Request, res: Response) => {
-//     uploadTeaser(req, res, () => {
-//         res.status(200).json({ success: true, path: "uploads/teaser/" + req.file?.filename });
-//     });
-// }
 
 export const getfundmesByPersonalUrl = async (req: Request, res: Response) => {
     try {
@@ -495,11 +446,11 @@ export const getFundMeList = async (req: Request, res: Response) => {
         if (search === "") {
             const fundmes = await FundMe.find({ 'published': true })
                 .populate({ path: 'owner', select: { 'name': 1, 'categories': 1 } })
-                .select({ 'title': 1, 'category': 1, 'date': 1, 'deadline': 1, 'finished': 1, 'owner': 1, 'show': 1 });
+                .select({ 'title': 1, 'category': 1, 'date': 1, 'deadline': 1, 'finished': 1, 'owner': 1, 'show': 1, 'wallet': 1 });
             var result: Array<object> = [];
             for (const fundme of fundmes) {
                 let time = 0.0;
-                if (!fundme.finished) time = (new Date(fundme.date).getTime() - Date.now() + 3600 * 24 * fundme.deadline * 1000) / (1000 * 24 * 3600);
+                if (!fundme.finished) time = (new Date(fundme.date).getTime() - new Date(calcTime()).getTime() + 3600 * 24 * fundme.deadline * 1000) / (1000 * 24 * 3600);
                 result.push({
                     id: fundme._id,
                     date: fundme.date,
@@ -523,6 +474,7 @@ export const setFundMeShow = async (req: Request, res: Response) => {
     try {
         const { fundmeId } = req.params;
         const { show } = req.body;
+        console.log(show)
         const updatedFundme = await FundMe.findByIdAndUpdate(fundmeId, { show: show }, { new: true });
         if (updatedFundme) return res.status(200).json({ success: true });
     } catch (err) {
@@ -530,32 +482,28 @@ export const setFundMeShow = async (req: Request, res: Response) => {
     }
 }
 
-// export const deleteFundMe = async (req: Request, res: Response) => {
-//     try {
-//         const { fundmeId } = req.params;
-//         const fundme = await FundMe.findById(fundmeId);
-//         const options = fundme.options;
-//         for (const option of options) {
-//             await Option.findByIdAndDelete(option.option);
-//         }
-//         if (fundme.teaser) {
-//             const filePath = "public/" + fundme.teaser;
-//             fs.unlink(filePath, (err) => {
-//                 if (err) throw err;
-//             });
-//         }
-//         if (fundme.cover) {
-//             const filePath = "public/" + fundme.cover;
-//             fs.unlink(filePath, (err) => {
-//                 if (err) throw err;
-//             });
-//         }
-//         await FundMe.findByIdAndDelete(fundmeId);
-//         return res.status(200).json({ success: true });
-//     } catch (err) {
-//         console.log(err);
-//     }
-// }
+export const deleteFundMe = async (req: Request, res: Response) => {
+    try {
+        const { fundmeId } = req.params;
+        const fundme = await FundMe.findById(fundmeId);
+        if (fundme.teaser) {
+            const filePath = "public/" + fundme.teaser;
+            fs.unlink(filePath, (err) => {
+                if (err) throw err;
+            });
+        }
+        if (fundme.cover) {
+            const filePath = "public/" + fundme.cover;
+            fs.unlink(filePath, (err) => {
+                if (err) throw err;
+            });
+        }
+        await FundMe.findByIdAndDelete(fundmeId);
+        return res.status(200).json({ success: true });
+    } catch (err) {
+        console.log(err);
+    }
+}
 
 export const updateFundMe = async (req: Request, res: Response) => {
     try {
