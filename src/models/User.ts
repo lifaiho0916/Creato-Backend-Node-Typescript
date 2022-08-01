@@ -38,24 +38,22 @@ const UserSchema = new mongoose.Schema({
     type: String,
     default: "EN",
   },
-  date: {
-    type: Date,
-  },
   new_notification: {
     type: Boolean,
     default: false,
   },
-  subscribed_users: [
-    {
+  subscribed_users: [{
       type: mongoose.Schema.Types.ObjectId,
-    },
-  ],
+  }],
   stripeID: {
     type: String
   },
   tipFunction: {
     type: Boolean,
     default: false,
+  },
+  date: {
+    type: Date,
   }
 });
 

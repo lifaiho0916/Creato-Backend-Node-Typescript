@@ -15,6 +15,8 @@ var mixpanel_importer = Mixpanel.init(CONSTANT.MIXPANEL_TOKEN, {
     secret: CONSTANT.MIXPANEL_API_SECRET
 });
 
+const welcomeDonuts = 10;
+
 function calcTime() {
     var d = new Date();
     var utc = d.getTime();
@@ -102,7 +104,7 @@ export const googleSignup = async (req: Request, res: Response) => {
                         email: userData.email,
                         avatar: userData.avatar,
                         name: userData.name,
-                        wallet: 30,
+                        wallet: welcomeDonuts,
                         role: role,
                         password: hash,
                         language: userData.lang,
@@ -239,7 +241,7 @@ export const facebookSignup = async (req: Request, res: Response) => {
                         email: userData.email,
                         avatar: userData.avatar,
                         name: userData.name,
-                        wallet: 30,
+                        wallet: welcomeDonuts,
                         role: role,
                         password: hash,
                         language: userData.lang,

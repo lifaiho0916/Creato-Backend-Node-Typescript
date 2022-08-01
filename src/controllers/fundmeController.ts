@@ -1,13 +1,11 @@
 import { Request, Response } from "express";
-// import path from "path";
-// import multer from "multer";
 import fs from "fs";
 import FundMe from "../models/FundMe";
 import User from "../models/User";
 import Fanwall from "../models/Fanwall";
 import AdminWallet from "../models/AdminWallet";
-// import Notification from "../models/Notification";
 import AdminUserTransaction from "../models/AdminUserTransaction";
+import { addNewNotification } from '../controllers/notificationController';
 
 function calcTime() {
     var d = new Date();
@@ -104,37 +102,13 @@ export const publishFundme = async (req: Request, res: Response) => {
 
         if (result[0].tipFunction === false) await User.findByIdAndUpdate(userId, { tipFunction: true });
         const updatedFundme = await FundMe.findByIdAndUpdate(result[1]._id, { published: true, date: calcTime() }, { new: true });
-
-        // const admins = await User.find({ role: 'ADMIN' });
-        // let new_notification = new Notification({
-        //     sender: admins[0],
-        //     receivers: [userId],
-        //     message: `<strong>"${fundme.title}"</strong> is now live! Share on socials & get your fans to join.`,
-        //     theme: 'Congrats',
-        //     fundme: updatedFundme._id,
-        //     type: "create_fundme",
-        // });
-
-        // await User.findOneAndUpdate({ _id: userId }, { new_notification: true });
-        // await new_notification.save();
-
-        // const user = await User.findOne({ _id: userId }).populate({ path: 'subscribed_users' });
-        // if (user.subscribed_users.length) {
-        // new_notification = new Notification({
-        //     sender: userId,
-        //     receivers: user.subscribed_users.map((sub_user: any) => sub_user._id),
-        //     message: `<strong>"${user.name}"</strong> created <strong>"${fundme.title}"</strong>, go Fund & support him now!`,
-        //     theme: 'A new FundMe',
-        //     fundme: updatedFundme._id,
-        //     type: "create_fundme",
-        // })
-        // await new_notification.save();
-        //     user.subscribed_users.forEach(async (sub_user: any) => {
-        //         await User.findByIdAndUpdate(sub_user._id, { new_notification: true });
-        //         req.body.io.to(sub_user.email).emit("create_notification");
-        //     });
-        // }
-        // req.body.io.to(user.email).emit("create_notification");
+        
+        addNewNotification(req.body.io, {
+            section: 'Create FundMe',
+            trigger: 'After created a FundMe',
+            fundme: updatedFundme,
+        });
+    
         return res.status(200).json({ success: true });
     } catch (err) {
         console.log(err)

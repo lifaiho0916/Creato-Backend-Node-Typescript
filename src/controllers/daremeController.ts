@@ -7,9 +7,9 @@ import User from "../models/User";
 import Option from "../models/Option";
 import Fanwall from "../models/Fanwall";
 import AdminWallet from "../models/AdminWallet";
-// import Notification from "../models/Notification";
 import AdminUserTransaction from "../models/AdminUserTransaction";
 import FundMe from "../models/FundMe";
+import { addNewNotification } from '../controllers/notificationController';
 
 function calcTime() {
     var d = new Date();
@@ -94,41 +94,14 @@ export const publishDareme = async (req: Request, res: Response) => {
             User.findById(userId),
             DareMe.findOne({ owner: userId, published: false })
         ]);
-        if (result[0].tipFunction === false) {
-            await User.findByIdAndUpdate(userId, { tipFunction: true });
-        }
+        if (result[0].tipFunction === false) await User.findByIdAndUpdate(userId, { tipFunction: true });
         const updatedDareme = await DareMe.findByIdAndUpdate(result[1]._id, { published: true, date: calcTime() }, { new: true });
 
-        // const admins = await User.find({ role: 'ADMIN' });
-        // let new_notification = new Notification({
-        //     sender: admins[0],
-        //     receivers: [userId],
-        //     message: `<strong>"${dareme.title}"</strong> is now live! Share on socials & get your fans to join.`,
-        //     theme: 'Congrats',
-        //     dareme: updatedDareme._id,
-        //     type: "create_dareme",
-        // });
-
-        // await User.findOneAndUpdate({ _id: userId }, { new_notification: true });
-        // await new_notification.save();
-
-        // const user = await User.findOne({ _id: userId }).populate({ path: 'subscribed_users' });
-        // if (user.subscribed_users.length) {
-        //     new_notification = new Notification({
-        //         sender: userId,
-        //         receivers: user.subscribed_users.map((sub_user: any) => sub_user._id),
-        //         message: `<strong>"${user.name}"</strong> created <strong>"${dareme.title}"</strong>, go Dare & support him now!`,
-        //         theme: 'A new DareMe',
-        //         dareme: updatedDareme._id,
-        //         type: "create_dareme",
-        //     })
-        //     await new_notification.save();
-        //     user.subscribed_users.forEach(async (sub_user: any) => {
-        //         await User.findByIdAndUpdate(sub_user._id, { new_notification: true });
-        //         req.body.io.to(sub_user.email).emit("create_notification");
-        //     });
-        // }
-        // req.body.io.to(user.email).emit("create_notification");
+        addNewNotification(req.body.io, {
+            section: 'Create DareMe',
+            trigger: 'After created a DareMe',
+            dareme: updatedDareme,
+        });
         return res.status(200).json({ success: true });
     } catch (err) {
         console.log(err)
