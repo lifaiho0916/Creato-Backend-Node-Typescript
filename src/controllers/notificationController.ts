@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
 import User from "../models/User";
-import Dareme from "../models/DareMe";
 import Notification from "../models/Notification";
 import NotificationSetting from "../models/NotificationSetting";
 import NotificationType from "../models/NotificationType";
@@ -28,11 +27,11 @@ export const getNotificationHistory = async (req: Request, res: Response) => {
 
     for (const notification of notifications) {
       let msg = notification.section.info[notification.index].contentEn;
-      if (msg.indexOf('DAREME_TITLE') !== -1) msg = msg.replace('DAREME_TITLE', `<strong>${notification.dareme.title}</strong>`);
-      if (msg.indexOf('FUNDME_TITLE') !== -1) msg = msg.replace('FUNDME_TITLE', `<strong>${notification.fundme.title}</strong>`);
+      if (msg.indexOf('DAREME_TITLE') !== -1) msg = msg.replace('DAREME_TITLE', `<strong>${notification.dareme?.title}</strong>`);
+      if (msg.indexOf('FUNDME_TITLE') !== -1) msg = msg.replace('FUNDME_TITLE', `<strong>${notification.fundme?.title}</strong>`);
       if (msg.indexOf('NAME_OF_OWNER') !== -1) msg = msg.replace('NAME_OF_OWNER', `<strong>${notification.sender.name}</strong>`);
       if (msg.indexOf('NAME_OF_VOTER') !== -1) msg = msg.replace('NAME_OF_VOTER', `<strong>${notification.sender.name}</strong>`);
-      if (msg.indexOf('NAME_OF_DARE') !== -1) msg = msg.replace('NAME_OF_DARE', `<strong>${notification.option.title}</strong>`);
+      if (msg.indexOf('NAME_OF_DARE') !== -1) msg = msg.replace('NAME_OF_DARE', `<strong>${notification.option?.title}</strong>`);
       if (msg.indexOf('NUMBER_OF_DONUTS') !== -1) msg = msg.replace('NUMBER_OF_DONUTS', `<strong>${notification.donuts}</strong>`);
 
       for (const resInfo of notification.receiverInfo) {
@@ -463,41 +462,6 @@ export const addNewNotification = async (io: any, data: any) => {
     console.log(err)
   }
 }
-
-export const newNotification = async (io: any) => {
-  try {
-    const currentDate = new Date();
-    const oneDay = 1000 * 3600 * 24;
-    const daremes = await Dareme.find({});
-    const admins = await User.find({ role: "ADMIN" })
-    daremes.forEach(async (dareme: any) => {
-      if (currentDate.getTime() - dareme.date < dareme.deadline * oneDay) {
-        let new_notification = new Notification({
-          sender: admins[0],
-          receivers: [dareme.owner],
-          message: `xxx donuts earned in [DareMe title] & [Winning Dare] is leading!`,
-          them: "Daily update of DareMe (at 23:59)",
-          dareme: dareme._id,
-          type: "ongoing_dareme",
-        });
-        await new_notification.save();
-
-        new_notification = new Notification({
-          sender: admins[0],
-          receivers: [dareme.owner], //should be voters + writer
-          message: `Let's see how [DareMe title] goes! Support & dare [owner name]!`,
-          them: "Daily update of DareMe (at 23:59)",
-          dareme: dareme._id,
-          type: "ongoing_dareme"
-        })
-        await new_notification.save();
-        io.emit("create_notification")
-      }
-    });
-  } catch (err) {
-    console.log({ err });
-  }
-};
 
 export const getNotificationSetting = async (req: Request, res: Response) => {
   try {
