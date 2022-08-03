@@ -544,15 +544,43 @@ export const getDaremesOngoing = async (req: Request, res: Response) => {
                 }
             ]);
 
-        const result = await Promise.all([daremeFunc, fundmeFunc, fanwallFunc]);
+        const finishedDareme = DareMe.find({ finished: true }).populate({ path: 'owner' })
+        const finishedFundme = FundMe.find({ finished: true }).populate({ path: 'owner' })
+
+        const result = await Promise.all([daremeFunc, fundmeFunc, fanwallFunc, finishedDareme, finishedFundme]);
         const daremes = result[0];
         const fundmes = result[1];
         const fanwalls = result[2];
 
+        const users = <Array<any>>[];
+        for (const dareme of result[3]) {
+            const filters = users.filter((user: any) => (user._id + '') === (dareme.owner._id + ''))
+            if (filters.length === 0) {
+                users.push(dareme.owner);
+            }
+        }
+
+        for (const fundme of result[4]) {
+            const filters = users.filter((user: any) => (user._id + '') === (fundme.owner._id + ''))
+            if (filters.length === 0) {
+                users.push(fundme.owner);
+            }
+        }
+
         let resItems = <Array<any>>[];
+        let daremeFuncs = <Array<any>>[];
+        let fundmeFuncs = <Array<any>>[];
+
+        for (const dareme of daremes) { daremeFuncs.push(Fanwall.findOne({ dareme: dareme._id })) }
+        for (const fundme of fundmes) { fundmeFuncs.push(Fanwall.findOne({ fundme: fundme._id })) }
+
+        const result1 = await Promise.all(daremeFuncs);
+        const result2 = await Promise.all(fundmeFuncs);
+
+        let index = 0;
         for (const dareme of daremes) {
             let donuts = 0;
-            let fanwall = await Fanwall.findOne({ dareme: dareme._id });
+            let fanwall = result1[index];
             dareme.options.forEach((option: any) => { if (option.option.status === 1) donuts += option.option.donuts; });
             resItems.push({
                 id: dareme._id,
@@ -570,10 +598,12 @@ export const getDaremesOngoing = async (req: Request, res: Response) => {
                 fanwall: fanwall ? fanwall.posted : false,
                 time: (new Date(dareme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * dareme.deadline) / (24 * 3600 * 1000),
             });
+            index++;
         }
 
+        index = 0;
         for (const fundme of fundmes) {
-            let fanwall = await Fanwall.findOne({ fundme: fundme._id });
+            let fanwall = result2[index];
             resItems.push({
                 id: fundme._id,
                 type: 'fundme',
@@ -591,6 +621,7 @@ export const getDaremesOngoing = async (req: Request, res: Response) => {
                 fanwall: fanwall ? fanwall.posted : false,
                 time: (new Date(fundme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * fundme.deadline) / (24 * 3600 * 1000),
             });
+            index++;
         }
 
         let resFanwalls = <Array<any>>[];
@@ -641,7 +672,19 @@ export const getDaremesOngoing = async (req: Request, res: Response) => {
             }
         });
 
-        return res.status(200).json({ daremes: resItems, fanwalls: resFanwalls });
+        const newArr = resItems.slice()
+        for (let i = newArr.length - 1; i > 0; i--) {
+            const rand = Math.floor(Math.random() * (i + 1));
+            [newArr[i], newArr[rand]] = [newArr[rand], newArr[i]];
+        }
+
+        const newArr1 = users.slice()
+        for (let i = newArr1.length - 1; i > 0; i--) {
+            const rand = Math.floor(Math.random() * (i + 1));
+            [newArr1[i], newArr1[rand]] = [newArr1[rand], newArr1[i]];
+        }
+
+        return res.status(200).json({ success: true, daremes: newArr, fanwalls: resFanwalls, users: newArr1 });
     } catch (err) {
         console.log(err);
     }
