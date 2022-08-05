@@ -68,6 +68,7 @@ export const getNotifications = async (req: Request, res: Response) => {
       ]).sort({ date: -1 }).select({ receiverInfo: 1, dareme: 1, sender: 1, section: 1, index: 1, date: 1, option: 1, donuts: 1 });
 
     let result: Array<any> = [];
+    let count = 0;
 
     notifications.forEach((notification: any) => {
       let msg = notification.section.info[notification.index].contentEn;
@@ -79,6 +80,8 @@ export const getNotifications = async (req: Request, res: Response) => {
       if (msg.indexOf('NUMBER_OF_DONUTS') !== -1) msg = msg.replace('NUMBER_OF_DONUTS', `<strong>${notification.donuts}</strong>`);
 
       const resInfo = notification.receiverInfo.filter((info: any) => (info.receiver._id + '') === (userId + ''));
+      if (resInfo[0].read === false) count++;
+
       result.push({
         id: notification._id,
         section: notification.section.section,
@@ -91,6 +94,8 @@ export const getNotifications = async (req: Request, res: Response) => {
         msg: msg
       });
     });
+
+    if (count === 0) await User.findById(userId, { new_notification: false });
 
     return res.status(200).json({ success: true, list: result });
   } catch (err) {

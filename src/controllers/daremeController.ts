@@ -556,15 +556,15 @@ export const getDaremesOngoing = async (req: Request, res: Response) => {
 
         const users = <Array<any>>[];
         for (const dareme of result[3]) {
-            const filters = users.filter((user: any) => (user._id + '') === (dareme.owner._id + '') && user.role === 'USER')
-            if (filters.length === 0) {
+            const filters = users.filter((user: any) => (user._id + '') === (dareme.owner._id + ''))
+            if (filters.length === 0 && dareme.owner.role === 'USER') {
                 users.push(dareme.owner);
             }
         }
 
         for (const fundme of result[4]) {
-            const filters = users.filter((user: any) => (user._id + '') === (fundme.owner._id + '') && user.role === 'USER')
-            if (filters.length === 0) {
+            const filters = users.filter((user: any) => (user._id + '') === (fundme.owner._id + ''))
+            if (filters.length === 0 && fundme.owner.role === 'USER') {
                 users.push(fundme.owner);
             }
         }
