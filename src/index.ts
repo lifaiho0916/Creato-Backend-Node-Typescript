@@ -1,11 +1,10 @@
-import express, { application } from "express";
+import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
 import cron from "node-cron";
 import http from "http";
 import SocketServer from "./socket";
 import { Request, Response } from "express";
-import * as path from 'path';
 
 //Routers
 import { checkOngoingdaremes } from "./controllers/daremeController";

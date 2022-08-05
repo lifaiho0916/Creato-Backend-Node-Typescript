@@ -95,7 +95,7 @@ export const getNotifications = async (req: Request, res: Response) => {
       });
     });
 
-    if (count === 0) await User.findById(userId, { new_notification: false });
+    if (count === 0) await User.findByIdAndUpdate(userId, { new_notification: false });
 
     return res.status(200).json({ success: true, list: result });
   } catch (err) {
@@ -349,7 +349,7 @@ export const addNewNotification = async (io: any, data: any) => {
                 date: currentTime,
                 dareme: data.dareme._id,
                 option: data.option._id,
-                donuts: 1,
+                donuts: data.donuts,
               });
 
               notifications.push(newNotify.save());
@@ -378,7 +378,7 @@ export const addNewNotification = async (io: any, data: any) => {
                 date: currentTime,
                 dareme: data.dareme._id,
                 option: data.option._id,
-                donuts: 50,
+                donuts: data.donuts,
               });
 
               notifications.push(newNotify.save());
@@ -419,7 +419,7 @@ export const addNewNotification = async (io: any, data: any) => {
                 }],
                 date: currentTime,
                 fundme: data.fundme._id,
-                donuts: 1,
+                donuts: data.donuts,
               });
 
               notifications.push(newNotify.save());
@@ -447,7 +447,7 @@ export const addNewNotification = async (io: any, data: any) => {
                 }],
                 date: currentTime,
                 fundme: data.fundme._id,
-                donuts: data.fundme.reward,
+                donuts: data.donuts,
               });
 
               notifications.push(newNotify.save());

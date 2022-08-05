@@ -175,15 +175,15 @@ export const fundCreator = async (req: Request, res: Response) => {
                 if ((vote.voter + "") === (userId + "")) {
                     if (amount !== 1) {
                         vote.donuts = vote.donuts + amount;
-                        if(amount >= fundme.reward) vote.superfan = true;
+                        if (amount >= fundme.reward) vote.superfan = true;
                     }
                     else vote.canFree = false;
                 }
                 return vote;
             });
-        } else voteInfo.push({ 
-            voter: userId, 
-            donuts: amount > 1 ? amount : 0, 
+        } else voteInfo.push({
+            voter: userId,
+            donuts: amount > 1 ? amount : 0,
             canFree: amount === 1 ? false : true,
             superfan: amount >= fundme.reward ? true : false
         });
@@ -207,27 +207,31 @@ export const fundCreator = async (req: Request, res: Response) => {
             voteInfo: updateFundme.voteInfo,
             time: (new Date(updateFundme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * updateFundme.deadline + 1000 * 60) / (24 * 3600 * 1000),
         }
-        if (amount === 1) {
-            const adminWallet = await AdminWallet.findOne({ admin: "ADMIN" });
-            const adminDonuts = adminWallet.wallet - 1;
-            await AdminWallet.findOneAndUpdate({ admin: "ADMIN" }, { wallet: adminDonuts });
-            req.body.io.to("ADMIN").emit("wallet_change", adminDonuts);
-            const transaction = new AdminUserTransaction({
-                description: 3,
-                from: "ADMIN",
-                to: "FUNDME",
-                user: userId,
-                fundme: fundmeId,
-                donuts: 1,
-                date: calcTime()
-            });
-            await transaction.save();
+        if (amount < updateFundme.reward) {
+            if (amount === 1) {
+                const adminWallet = await AdminWallet.findOne({ admin: "ADMIN" });
+                const adminDonuts = adminWallet.wallet - 1;
+                await AdminWallet.findOneAndUpdate({ admin: "ADMIN" }, { wallet: adminDonuts });
+                req.body.io.to("ADMIN").emit("wallet_change", adminDonuts);
+                const transaction = new AdminUserTransaction({
+                    description: 3,
+                    from: "ADMIN",
+                    to: "FUNDME",
+                    user: userId,
+                    fundme: fundmeId,
+                    donuts: 1,
+                    date: calcTime()
+                });
+                await transaction.save();
+            }
 
+            ///////// None Superfan transaction /////////////////
             addNewNotification(req.body.io, {
                 section: 'Ongoing FundMe',
                 trigger: 'After voter voted in FundMe (non-Superfans)',
                 fundme: updateFundme,
-                voterId: userId
+                voterId: userId,
+                donuts: amount
             });
             return res.status(200).json({ success: true, fundme: fundmePayload });
         } else {
@@ -245,6 +249,7 @@ export const fundCreator = async (req: Request, res: Response) => {
                 category: updatedUser.categories,
                 new_notification: updatedUser.new_notification,
             };
+
             const transaction = new AdminUserTransaction({
                 description: 5,
                 from: "USER",
@@ -261,7 +266,8 @@ export const fundCreator = async (req: Request, res: Response) => {
                 section: 'Ongoing FundMe',
                 trigger: 'After voter voted in FundMe (Superfans)',
                 fundme: updateFundme,
-                voterId: userId
+                voterId: userId,
+                donuts: amount
             });
             return res.status(200).json({ success: true, fundme: fundmePayload, user: payload });
         }

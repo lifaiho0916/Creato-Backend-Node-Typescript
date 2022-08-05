@@ -871,33 +871,38 @@ export const supportCreator = async (req: Request, res: Response) => {
             options: updatedDareme.options
         };
 
-        if (amount === 1) {
-            const adminWallet = await AdminWallet.findOne({ admin: "ADMIN" });
-            const adminDonuts = adminWallet.wallet - 1;
-            await AdminWallet.findOneAndUpdate({ admin: "ADMIN" }, { wallet: adminDonuts });
-            req.body.io.to("ADMIN").emit("wallet_change", adminDonuts);
-            const transaction = new AdminUserTransaction({
-                description: 3,
-                from: "ADMIN",
-                to: "DAREME",
-                user: userId,
-                dareme: daremeId,
-                donuts: 1,
-                date: calcTime()
-            });
-            await transaction.save();
+        const superfan = updatedDareme.reward ? updatedDareme.reward : 50;
+
+        if (amount < superfan) {
+            if (amount === 1) {
+                const adminWallet = await AdminWallet.findOne({ admin: "ADMIN" });
+                const adminDonuts = adminWallet.wallet - 1;
+                await AdminWallet.findOneAndUpdate({ admin: "ADMIN" }, { wallet: adminDonuts });
+                req.body.io.to("ADMIN").emit("wallet_change", adminDonuts);
+
+                const transaction = new AdminUserTransaction({
+                    description: 3,
+                    from: "ADMIN",
+                    to: "DAREME",
+                    user: userId,
+                    dareme: daremeId,
+                    donuts: 1,
+                    date: calcTime()
+                });
+                await transaction.save();
+            }
+            /////////////// NON SUPERFAN transaction /////////////
 
             addNewNotification(req.body.io, {
                 section: 'Ongoing DareMe',
                 trigger: 'After voter voted in DareMe (non-Superfans)',
                 dareme: updatedDareme,
                 option: option,
-                voterId: userId
+                voterId: userId,
+                donuts: amount
             });
             return res.status(200).json({ success: true, dareme: resDareme, option: optionNew });
-        }
-
-        if (amount > 1) {
+        } else {
             let wallet = user.wallet - amount;
             const updatedUser = await User.findByIdAndUpdate(userId, { wallet: wallet }, { new: true });
             const payload = {
@@ -913,13 +918,14 @@ export const supportCreator = async (req: Request, res: Response) => {
                 new_notification: updatedUser.new_notification,
             };
             req.body.io.to(updatedUser.email).emit("wallet_change", updatedUser.wallet);
+
             const transaction = new AdminUserTransaction({
                 description: 5,
                 from: "USER",
                 to: "DAREME",
                 user: userId,
                 dareme: daremeId,
-                donuts: 50,
+                donuts: amount,
                 date: calcTime()
             });
             await transaction.save();
@@ -929,8 +935,10 @@ export const supportCreator = async (req: Request, res: Response) => {
                 trigger: 'After voter voted in DareMe (Superfans)',
                 dareme: updatedDareme,
                 option: option,
-                voterId: userId
+                voterId: userId,
+                donuts: amount
             });
+
             return res.status(200).json({ success: true, dareme: resDareme, option: optionNew, user: payload });
         }
     } catch (err) {
