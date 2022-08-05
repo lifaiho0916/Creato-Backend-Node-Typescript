@@ -169,7 +169,9 @@ export const saveDareme = async (req: Request, res: Response) => {
                 category: dareme.category,
                 options: dareme.options,
                 sizeType: dareme.sizeType,
-                coverIndex: dareme.coverIndex
+                coverIndex: dareme.coverIndex,
+                reward: dareme.reward,
+                rewardText: dareme.rewardText
             }, { new: true });
             const resultDareme = await DareMe.findById(updatedDareme._id).populate({ path: 'options.option' });
             if (resultDareme) res.status(200).json({ success: true, dareme: resultDareme });
@@ -528,7 +530,7 @@ export const getDaremesOngoing = async (req: Request, res: Response) => {
                     path: 'dareme',
                     Model: DareMe,
                     select: {
-                        'title': 1, 'deadline': 1, 'category': 1
+                        'title': 1, 'deadline': 1, 'category': 1, 'reward': 1
                     },
                     populate: {
                         path: 'options.option',
@@ -554,14 +556,14 @@ export const getDaremesOngoing = async (req: Request, res: Response) => {
 
         const users = <Array<any>>[];
         for (const dareme of result[3]) {
-            const filters = users.filter((user: any) => (user._id + '') === (dareme.owner._id + ''))
+            const filters = users.filter((user: any) => (user._id + '') === (dareme.owner._id + '') && user.role === 'USER')
             if (filters.length === 0) {
                 users.push(dareme.owner);
             }
         }
 
         for (const fundme of result[4]) {
-            const filters = users.filter((user: any) => (user._id + '') === (fundme.owner._id + ''))
+            const filters = users.filter((user: any) => (user._id + '') === (fundme.owner._id + '') && user.role === 'USER')
             if (filters.length === 0) {
                 users.push(fundme.owner);
             }
@@ -645,7 +647,8 @@ export const getDaremesOngoing = async (req: Request, res: Response) => {
                         title: fanwall.dareme.title,
                         options: fanwall.dareme.options,
                         category: fanwall.dareme.category,
-                        donuts: totalDonuts
+                        donuts: totalDonuts,
+                        reward: fanwall.dareme.reward,
                     }
                 });
             } else {
@@ -717,6 +720,8 @@ export const getDaremeDetails = async (req: Request, res: Response) => {
                 options: dareme.options,
                 finished: dareme.finished,
                 show: dareme.show,
+                reward: dareme.reward,
+                rewardText: dareme.rewardText,
                 time: (new Date(dareme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * dareme.deadline + 1000 * 60) / (24 * 3600 * 1000),
             };
             return res.status(200).json({ success: true, dareme: result });
@@ -736,7 +741,7 @@ export const getDaremeResult = async (req: Request, res: Response) => {
                 model: Option,
                 populate: { path: 'writer', select: { '_id': 0, 'name': 1 } },
                 select: { '__v': 0 },
-            }).select({ 'finished': 0, 'published': 0, 'wallet': 0, '__v': 0 });
+            }).select({ 'published': 0, 'wallet': 0, '__v': 0 });
         if (dareme) {
             const fanwall = await Fanwall.findOne({ dareme: dareme._id }).select({ '__v': 0, 'data': 0 });
             const options = dareme.options.filter((option: any) => option.option.status === 1);
@@ -778,20 +783,21 @@ export const getOptionDetails = async (req: Request, res: Response) => {
         const dareme = await DareMe.findById(daremeId)
             .populate({ path: 'owner', select: { 'avatar': 1, 'personalisedUrl': 1, 'name': 1 } })
             .populate({ path: 'options.option' })
-            .select({ 'teaser': 1, 'options': 1, 'title': 1, 'cover': 1, 'sizeType': 1 });
+            .select({ 'teaser': 1, 'options': 1, 'title': 1, 'cover': 1, 'sizeType': 1, 'reward': 1, 'rewardText': 1 });
         const resDareme = {
             _id: dareme._id,
             owner: dareme.owner,
             teaser: dareme.teaser,
             title: dareme.title,
             cover: dareme.cover,
+            reward: dareme.reward,
             sizeType: dareme.sizeType,
             options: dareme.options
         };
         const option = await Option.findById(optionId)
             .select({ 'donuts': 1, 'title': 1 })
             .populate({ path: 'writer', select: { 'avatar': 1, 'personalisedUrl': 1, 'name': 1, '_id': 0 } });
-        if (option) res.status(200).json({ option: option, dareme: resDareme, success: true });
+        if (option) return res.status(200).json({ option: option, dareme: resDareme, success: true });
     } catch (err) {
         console.log(err);
     }
@@ -800,7 +806,16 @@ export const getOptionDetails = async (req: Request, res: Response) => {
 export const supportCreator = async (req: Request, res: Response) => {
     try {
         const { userId, daremeId, optionId, amount } = req.body;
-        const option = await Option.findById(optionId);
+        const result = await Promise.all([
+            Option.findById(optionId),
+            DareMe.findById(daremeId).populate({ path: 'owner' }),
+            User.findById(userId)
+        ]);
+
+        const option = result[0];
+        const dareme = result[1];
+        const user = result[2];
+
         let voteInfo = option.voteInfo;
         let totalDonuts = option.donuts + amount;
         let totalVoters = option.voters;
@@ -808,35 +823,53 @@ export const supportCreator = async (req: Request, res: Response) => {
         if (filters.length) {
             voteInfo = voteInfo.map((option: any) => {
                 if ((option.voter + "") === (userId + "")) {
-                    if (amount === 50) option.donuts = option.donuts + 50;
-                    else option.canFree = false;
+                    if (amount > 1) {
+                        option.donuts = option.donuts + amount;
+                        if (dareme.reward) {
+                            if (amount >= dareme.reward)
+                                option.superfan = true;
+                        } else {
+                            if (amount === 50) option.superfan = true;
+                        }
+                    } else option.canFree = false;
                 }
                 return option;
             });
         } else {
             totalVoters = totalVoters + 1;
-            voteInfo.push({ voter: userId, donuts: amount > 1 ? amount : 0, canFree: amount === 1 ? false : true });
+            voteInfo.push({
+                voter: userId,
+                donuts: amount > 1 ? amount : 0,
+                canFree: amount === 1 ? false : true,
+                superfan: dareme.reward ? amount >= dareme.reward ? true : false
+                    : amount >= 50 ? true : false
+            });
         }
-        const optionNew = await Option.findByIdAndUpdate(option._id, { donuts: totalDonuts, voters: totalVoters, voteInfo: voteInfo }, { new: true })
-            .select({ 'donuts': 1, 'title': 1 })
-            .populate({ path: 'writer', select: { 'avatar': 1, 'personalisedUrl': 1, 'name': 1, '_id': 0 } });
-
-        const dareme = await DareMe.findById(daremeId).populate({ path: 'owner' });
         const daremeWallet = dareme.wallet + amount;
-        const updatedDareme = await DareMe.findByIdAndUpdate(daremeId, { wallet: daremeWallet }, { new: true })
-            .populate({ path: 'owner', select: { 'avatar': 1, 'personalisedUrl': 1, 'name': 1 } })
-            .populate({ path: 'options.option' })
-            .select({ 'teaser': 1, 'options': 1, 'title': 1, 'cover': 1, 'sizeType': 1 });
+
+        const result1 = await Promise.all([
+            Option.findByIdAndUpdate(option._id, { donuts: totalDonuts, voters: totalVoters, voteInfo: voteInfo }, { new: true })
+                .select({ 'donuts': 1, 'title': 1 })
+                .populate({ path: 'writer', select: { 'avatar': 1, 'personalisedUrl': 1, 'name': 1, '_id': 0 } }),
+            DareMe.findByIdAndUpdate(daremeId, { wallet: daremeWallet }, { new: true })
+                .populate({ path: 'owner', select: { 'avatar': 1, 'personalisedUrl': 1, 'name': 1 } })
+                .populate({ path: 'options.option' })
+                .select({ 'teaser': 1, 'options': 1, 'title': 1, 'cover': 1, 'sizeType': 1, 'reward': 1 })
+        ]);
+
+        const optionNew = result1[0];
+        const updatedDareme = result1[1];
+
         const resDareme = {
             _id: updatedDareme._id,
             owner: updatedDareme.owner,
             teaser: updatedDareme.teaser,
             title: updatedDareme.title,
             cover: updatedDareme.cover,
+            reward: updatedDareme.reward,
             sizeType: updatedDareme.sizeType,
             options: updatedDareme.options
         };
-        const user = await User.findById(userId);
 
         if (amount === 1) {
             const adminWallet = await AdminWallet.findOne({ admin: "ADMIN" });
@@ -864,8 +897,8 @@ export const supportCreator = async (req: Request, res: Response) => {
             return res.status(200).json({ success: true, dareme: resDareme, option: optionNew });
         }
 
-        if (amount === 50) {
-            let wallet = user.wallet - 50;
+        if (amount > 1) {
+            let wallet = user.wallet - amount;
             const updatedUser = await User.findByIdAndUpdate(userId, { wallet: wallet }, { new: true });
             const payload = {
                 id: updatedUser._id,
@@ -900,19 +933,6 @@ export const supportCreator = async (req: Request, res: Response) => {
             });
             return res.status(200).json({ success: true, dareme: resDareme, option: optionNew, user: payload });
         }
-
-        //create notification
-        // let new_notification = new Notification({
-        //     sender: userId,
-        //     receivers: [dareme.owner],
-        //     message: `<strong>"${user.name}"</strong> supported <strong>"${option.title}"</strong> with ${amount} Donuts.`,
-        //     them: "new vote",
-        //     type: "ongoing_dareme",
-        //     dareme: dareme._id,
-        // });
-        // await new_notification.save();
-        // req.body.io.to(dareme.owner.email).emit("create_notification");
-        //end
     } catch (err) {
         console.log(err);
     }

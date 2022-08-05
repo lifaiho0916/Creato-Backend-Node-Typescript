@@ -160,24 +160,37 @@ export const getFundmeDetails = async (req: Request, res: Response) => {
 export const fundCreator = async (req: Request, res: Response) => {
     try {
         const { fundmeId, amount, userId } = req.body;
-        const user = await User.findById(userId);
-        const fundme = await FundMe.findById(fundmeId).populate({ path: 'owner' });
+        const result = await Promise.all([
+            User.findById(userId),
+            FundMe.findById(fundmeId).populate({ path: 'owner' })
+        ]);
+
+        const user = result[0];
+        const fundme = result[1];
 
         let voteInfo = fundme.voteInfo;
         let filters = voteInfo.filter((vote: any) => (vote.voter + "") === (userId + ""));
         if (filters.length) {
             voteInfo = voteInfo.map((vote: any) => {
                 if ((vote.voter + "") === (userId + "")) {
-                    if (amount !== 1) vote.donuts = vote.donuts + amount;
+                    if (amount !== 1) {
+                        vote.donuts = vote.donuts + amount;
+                        if(amount >= fundme.reward) vote.superfan = true;
+                    }
                     else vote.canFree = false;
                 }
                 return vote;
             });
-        } else voteInfo.push({ voter: userId, donuts: amount > 1 ? amount : 0, canFree: amount === 1 ? false : true });
+        } else voteInfo.push({ 
+            voter: userId, 
+            donuts: amount > 1 ? amount : 0, 
+            canFree: amount === 1 ? false : true,
+            superfan: amount >= fundme.reward ? true : false
+        });
 
         let fundmeWallet = fundme.wallet + amount;
         const updateFundme = await FundMe.findByIdAndUpdate(fundme._id, { wallet: fundmeWallet, voteInfo: voteInfo }, { new: true }).populate({ path: 'owner' });
-        const daremePayload = {
+        const fundmePayload = {
             _id: updateFundme._id,
             owner: updateFundme.owner,
             title: updateFundme.title,
@@ -216,7 +229,7 @@ export const fundCreator = async (req: Request, res: Response) => {
                 fundme: updateFundme,
                 voterId: userId
             });
-            return res.status(200).json({ success: true, fundme: daremePayload });
+            return res.status(200).json({ success: true, fundme: fundmePayload });
         } else {
             const userWallet = user.wallet - amount;
             const updatedUser = await User.findByIdAndUpdate(user._id, { wallet: userWallet }, { new: true });
@@ -250,7 +263,7 @@ export const fundCreator = async (req: Request, res: Response) => {
                 fundme: updateFundme,
                 voterId: userId
             });
-            return res.status(200).json({ success: true, fundme: daremePayload, user: payload });
+            return res.status(200).json({ success: true, fundme: fundmePayload, user: payload });
         }
     } catch (err) {
         console.log(err);
@@ -275,7 +288,7 @@ export const getFundmeResult = async (req: Request, res: Response) => {
         const { fundmeId } = req.params;
         const fundme = await FundMe.findById(fundmeId)
             .populate([{ path: 'owner', select: { 'avatar': 1, 'personalisedUrl': 1, 'name': 1, '_id': 1 } }, { path: 'voteInfo.voter', select: { '_id': 0, 'name': 1, 'canFee': 1 } }])
-            .select({ 'finished': 0, 'published': 0, '__v': 0 });
+            .select({ 'published': 0, '__v': 0 });
         if (fundme) {
             const fanwall = await Fanwall.findOne({ fundme: fundme._id }).select({ '__v': 0, 'data': 0 });
             // let donuts = 0;

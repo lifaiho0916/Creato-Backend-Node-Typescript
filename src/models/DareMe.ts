@@ -51,6 +51,12 @@ const DareMeSchema = new monogoose.Schema({
         type: Boolean,
         default: true
     },
+    reward: {
+        type: Number
+    },
+    rewardText: {
+        type: String
+    },
     date: {
         type: Date,
         default: Date.now()

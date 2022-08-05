@@ -70,6 +70,9 @@ const FundMeSchema = new monogoose.Schema({
             type: Boolean,
             default: true
         },
+        superfan: {
+            type: Boolean
+        }
     }],
     date: {
         type: Date,

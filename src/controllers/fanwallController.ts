@@ -358,6 +358,7 @@ export const getPostDetail = async (req: Request, res: Response) => {
                 donuts: number,
                 date: Date,
                 avatar: string,
+                superfan: boolean,
                 personalisedUrl: string
             }[] = [];
 
@@ -371,6 +372,7 @@ export const getPostDetail = async (req: Request, res: Response) => {
                             donuts: filters[0].donuts + vote.donuts,
                             name: vote.voter.name,
                             avatar: vote.voter.avatar,
+                            superfan: vote.superfan,
                             date: filters[0].date > vote.date ? vote.date : filters[0].date,
                             personalisedUrl: vote.voter.personalisedUrl
                         };
@@ -381,6 +383,7 @@ export const getPostDetail = async (req: Request, res: Response) => {
                             donuts: vote.donuts,
                             name: vote.voter.name,
                             avatar: vote.voter.avatar,
+                            superfan: vote.superfan,
                             date: vote.date,
                             personalisedUrl: vote.voter.personalisedUrl
                         });
@@ -406,6 +409,7 @@ export const getPostDetail = async (req: Request, res: Response) => {
                 donuts: number,
                 date: Date,
                 avatar: string,
+                superfan: boolean,
                 personalisedUrl: string
             }[] = [];
 
@@ -422,6 +426,7 @@ export const getPostDetail = async (req: Request, res: Response) => {
                     name: vote.voter.name,
                     avatar: vote.voter.avatar,
                     date: vote.date,
+                    superfan: vote.superfan,
                     personalisedUrl: vote.voter.personalisedUrl
                 });
             });

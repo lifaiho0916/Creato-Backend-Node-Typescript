@@ -38,9 +38,9 @@ const OptionSchema = new mongoose.Schema({
             type: Boolean,
             default: true
         },
-        // date: {
-        //     type: Date
-        // }
+        superfan: {
+            type: Boolean
+        }
     }],
     date: {
         type: Date,
