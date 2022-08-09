@@ -40,6 +40,9 @@ const OptionSchema = new mongoose.Schema({
         },
         superfan: {
             type: Boolean
+        },
+        transfer: {
+            type: Boolean
         }
     }],
     date: {

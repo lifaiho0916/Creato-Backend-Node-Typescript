@@ -23,4 +23,4 @@ const NotificationSettingSchema = new mongoose.Schema({
     }]
 });
 
-export default mongoose.model('notificationsetting', NotificationSettingSchema);
+export default mongoose.model('notificationsettings', NotificationSettingSchema);
