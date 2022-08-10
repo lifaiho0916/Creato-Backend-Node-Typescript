@@ -17,6 +17,9 @@ const OptionSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    requests: {
+        type: Number
+    },
     status: {
         type: Number, // 1 active, 0 wating, -1 decline
     },

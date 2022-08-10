@@ -15,24 +15,28 @@ export const getNotificationHistory = async (req: Request, res: Response) => {
   try {
     const notifications = await Notification.find()
       .populate([
-        { path: 'dareme', select: { title: 1 } },
-        { path: 'fundme', select: { title: 1 } },
+        { path: 'dareme', select: { title: 1 }, populate: { path: 'owner' } },
+        { path: 'fundme', select: { title: 1 }, populate: { path: 'owner' } },
         { path: 'sender', select: { role: 1, avatar: 1, name: 1 } },
         { path: 'section' },
         { path: 'option' },
         { path: 'receiverInfo.receiver', select: { name: 1 } }
-      ]).sort({ date: -1 }).select({ receiverInfo: 1, dareme: 1, sender: 1, section: 1, index: 1, date: 1, donuts: 1, option: 1 });
+      ]).sort({ date: -1 }).select({ receiverInfo: 1, dareme: 1, fundme: 1, sender: 1, section: 1, index: 1, date: 1, donuts: 1, option: 1 });
 
-    let result: Array<any> = [];
+    let result: Array<any> = []
 
     for (const notification of notifications) {
-      let msg = notification.section.info[notification.index].contentEn;
-      if (msg.indexOf('DAREME_TITLE') !== -1) msg = msg.replace('DAREME_TITLE', `<strong>${notification.dareme?.title}</strong>`);
-      if (msg.indexOf('FUNDME_TITLE') !== -1) msg = msg.replace('FUNDME_TITLE', `<strong>${notification.fundme?.title}</strong>`);
-      if (msg.indexOf('NAME_OF_OWNER') !== -1) msg = msg.replace('NAME_OF_OWNER', `<strong>${notification.sender.name}</strong>`);
-      if (msg.indexOf('NAME_OF_VOTER') !== -1) msg = msg.replace('NAME_OF_VOTER', `<strong>${notification.sender.name}</strong>`);
-      if (msg.indexOf('NAME_OF_DARE') !== -1) msg = msg.replace('NAME_OF_DARE', `<strong>${notification.option?.title}</strong>`);
-      if (msg.indexOf('NUMBER_OF_DONUTS') !== -1) msg = msg.replace('NUMBER_OF_DONUTS', `<strong>${notification.donuts}</strong>`);
+      let msg = notification.section.info[notification.index].contentEn
+      if (msg.indexOf('DAREME_TITLE') !== -1) msg = msg.replace(/DAREME_TITLE/g, `<strong>${notification.dareme?.title}</strong>`)
+      if (msg.indexOf('FUNDME_TITLE') !== -1) msg = msg.replace('FUNDME_TITLE', `<strong>${notification.fundme?.title}</strong>`)
+      if (msg.indexOf('NAME_OF_OWNER') !== -1) {
+        if (notification.dareme) msg = msg.replace('NAME_OF_OWNER', `<strong>${notification.dareme.owner.name}</strong>`)
+        else if(notification.fundme) msg = msg.replace('NAME_OF_OWNER', `<strong>${notification.fundme.owner.name}</strong>`)
+      }
+      if (msg.indexOf('NAME_OF_VOTER') !== -1) msg = msg.replace('NAME_OF_VOTER', `<strong>${notification.sender.name}</strong>`)
+      if (msg.indexOf('NAME_OF_DARE') !== -1) msg = msg.replace('NAME_OF_DARE', `<strong>${notification.option.title}</strong>`);
+      if (msg.indexOf('WINNING_DARE_NAME') !== -1) msg = msg.replace('WINNING_DARE_NAME', `<strong>${notification?.option.title}</strong>`);
+      if (msg.indexOf('NUMBER_OF_DONUTS') !== -1) msg = msg.replace('NUMBER_OF_DONUTS', `<strong>${notification.donuts}</strong>`)
 
       for (const resInfo of notification.receiverInfo) {
         result.push({
@@ -59,8 +63,8 @@ export const getNotifications = async (req: Request, res: Response) => {
 
     const notifications = await Notification.find({ receiverInfo: { $elemMatch: { receiver: userId } } })
       .populate([
-        { path: 'dareme', select: { title: 1 } },
-        { path: 'fundme', select: { title: 1 } },
+        { path: 'dareme', select: { title: 1 }, populate: { path: 'owner' } },
+        { path: 'fundme', select: { title: 1 }, populate: { path: 'owner' } },
         { path: 'sender', select: { role: 1, avatar: 1, name: 1 } },
         { path: 'section' },
         { path: 'option' },
@@ -72,11 +76,16 @@ export const getNotifications = async (req: Request, res: Response) => {
 
     notifications.forEach((notification: any) => {
       let msg = notification.section.info[notification.index].contentEn;
-      if (msg.indexOf('DAREME_TITLE') !== -1) msg = msg.replace('DAREME_TITLE', `<strong>${notification.dareme.title}</strong>`);
+      console.log()
+      if (msg.indexOf('DAREME_TITLE') !== -1) msg = msg.replace(/DAREME_TITLE/g, `<strong>${notification.dareme.title}</strong>`);
       if (msg.indexOf('FUNDME_TITLE') !== -1) msg = msg.replace('FUNDME_TITLE', `<strong>${notification.fundme.title}</strong>`);
-      if (msg.indexOf('NAME_OF_OWNER') !== -1) msg = msg.replace('NAME_OF_OWNER', `<strong>${notification.sender.name}</strong>`);
+      if (msg.indexOf('NAME_OF_OWNER') !== -1) {
+        if (notification.dareme) msg = msg.replace('NAME_OF_OWNER', `<strong>${notification.dareme.owner.name}</strong>`)
+        else if(notification.fundme) msg = msg.replace('NAME_OF_OWNER', `<strong>${notification.fundme.owner.name}</strong>`)
+      }
       if (msg.indexOf('NAME_OF_VOTER') !== -1) msg = msg.replace('NAME_OF_VOTER', `<strong>${notification.sender.name}</strong>`);
       if (msg.indexOf('NAME_OF_DARE') !== -1) msg = msg.replace('NAME_OF_DARE', `<strong>${notification.option.title}</strong>`);
+      if (msg.indexOf('WINNING_DARE_NAME') !== -1) msg = msg.replace('WINNING_DARE_NAME', `<strong>${notification?.option.title}</strong>`);
       if (msg.indexOf('NUMBER_OF_DONUTS') !== -1) msg = msg.replace('NUMBER_OF_DONUTS', `<strong>${notification.donuts}</strong>`);
 
       const resInfo = notification.receiverInfo.filter((info: any) => (info.receiver._id + '') === (userId + ''));
@@ -84,9 +93,11 @@ export const getNotifications = async (req: Request, res: Response) => {
 
       result.push({
         id: notification._id,
-        section: notification.section.section,
+        index: notification.index,
+        section: notification.section,
         sender: notification.sender,
         receiver: resInfo[0].receiver,
+        donuts: notification.donuts,
         read: resInfo[0].read,
         dareme: notification.dareme ? notification.dareme : null,
         fundme: notification.fundme ? notification.fundme : null,
@@ -461,6 +472,52 @@ export const addNewNotification = async (io: any, data: any) => {
           }
         }
         index++;
+      }
+    } else if (data.section === 'Finished DareMe') {
+      index = 0
+      const result = await Promise.all([
+        User.findById(data.dareme.owner),
+        User.findOne({ role: 'ADMIN' })
+      ])
+
+      for (const info of type.info) {
+        if (info.auto && info.trigger === data.trigger) {
+          if (info.trigger === 'After DareMe is finished') {
+            /*
+              section: 'Finished DareMe',
+              trigger: 'After DareMe is Finished',
+              dareme: updatedDareme,
+            */
+            if (info.sender === 'Admin' && info.recipient === 'Voter of Non Winning Dares') {
+              const admin = result[1]
+              let users: Array<any> = []
+
+              data.voters.forEach((voter: any) => {
+                const newNotify = new Notification({
+                  section: type._id,
+                  index: index,
+                  sender: admin._id,
+                  receiverInfo: [{ receiver: voter.userId }],
+                  date: currentTime,
+                  option: data.option.option._id,
+                  dareme: data.dareme._id,
+                  donuts: voter.donuts
+                })
+                notifications.push(newNotify.save())
+                users.push(User.findById(voter.userId))
+                setUserNotifyTrue.push(User.findByIdAndUpdate(voter.userId, { new_notification: true }));
+              })
+
+              let userResult = await Promise.all(users)
+              for (const nuser of userResult) notifyUsers.push(nuser.email)
+            }
+
+            Promise.all(setUserNotifyTrue)
+            Promise.all(notifications)
+            for (const notify of notifyUsers) io.to(notify).emit('create_notification')
+          }
+        }
+        index++
       }
     }
   } catch (err) {
