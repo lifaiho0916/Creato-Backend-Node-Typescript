@@ -30,7 +30,9 @@ import {
     updateDareMe,
     deleteOption,
     getDaremeOptions,
-    checkRefundPossible
+    checkRefundPossible,
+    refundDonuts,
+    supportRefund
 } from '../../controllers/daremeController'
 
 router.post("/draft", auth, getDraftDareme);
@@ -55,8 +57,9 @@ router.post('/decline', auth, declineDareOption);
 router.post('/accept', auth, acceptDareOption);
 router.post('/win/option', auth, winDareOption);
 router.get('/:daremeId/options', auth, getDaremeOptions);
-router.get('/:daremeId/refund_possible', checkRefundPossible);
-
+router.get('/:daremeId/refund_possible', auth, checkRefundPossible);
+router.post('/:daremeId/refund_donuts', auth, refundDonuts)
+router.get('/:daremeId/support_refund', auth, supportRefund)
 //admin
 router.post('/daremes', auth, getDareMeList);
 router.post('/daremes/:daremeId', auth, setDareMeShow);

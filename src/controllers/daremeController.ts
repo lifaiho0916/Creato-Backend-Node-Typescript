@@ -171,8 +171,8 @@ export const getDaremeOptions = async (req: Request, res: Response) => {
         path: 'options.option',
         model: Option,
         populate: [
-          { path: 'writer', select: { '_id': 1, 'name': 1 } },
-          { path: 'voteInfo.voter', select: { '_id': 1, 'name': 1, 'avatar': 1 } }
+          { path: 'writer', select: { '_id': 1, 'name': 1, 'avatar': 1 } },
+          { path: 'voteInfo.voter', model: User, select: { '_id': 1, 'name': 1, 'avatar': 1 } }
         ]
       })
     const options = dareme.options
@@ -182,14 +182,17 @@ export const getDaremeOptions = async (req: Request, res: Response) => {
       if (option.option.requests) {
         let optionTemp = option
         let votes: Array<any> = []
+        let writerIsVoter = false
         option.option.voteInfo.forEach((vote: any) => {
           if ((option.option.writer._id + '') === (vote.voter._id + '')) {
+            writerIsVoter = true
             let voteTemp = vote
             voteTemp.donuts += option.option.requests
             votes.push(voteTemp)
           } else votes.push(vote)
         })
-        optionTemp.option.voteInfo += votes
+        if (writerIsVoter === false) votes.push({ voter: option.option.writer, donuts: option.option.requests })
+        optionTemp.option.voteInfo = votes
         resOptions.push(optionTemp)
       } else resOptions.push(option)
     })
@@ -202,18 +205,120 @@ export const getDaremeOptions = async (req: Request, res: Response) => {
 
 export const checkRefundPossible = async (req: Request, res: Response) => {
   try {
-    const { daremeId, userId } = req.params
+    const { daremeId } = req.params
+    const { userId } = req.body
     const dareme = await DareMe.findById(daremeId).populate({ path: 'options.option' })
     if (dareme.fanwall) return res.status(200).json({ success: true, refund: false })
 
     let refund = true
     dareme.options.forEach((option: any) => {
       option.option.voteInfo.forEach((vote: any) => {
-        if ((vote.voter + '') === (userId + '') && vote?.transfer === true) refund = false
+        if ((vote.voter + '') === (userId + '') && vote.transfer && vote.transfer === true) refund = false
       })
     })
 
     return res.status(200).json({ success: true, refund: refund })
+  } catch (err) {
+    console.log(err)
+  }
+}
+
+export const refundDonuts = async (req: Request, res: Response) => {
+  try {
+    const { daremeId } = req.params
+    const { donuts, userId, io } = req.body
+
+    const results = await Promise.all([
+      User.findById(userId),
+      DareMe.findById(daremeId).populate({ path: 'options.option' })
+    ])
+
+    const user = results[0]
+    const dareme = results[1]
+    const userWallet = user.wallet + donuts
+    const options = dareme.options
+
+    let optionFuncs: Array<any> = []
+    options.forEach((option: any) => {
+      let votes: Array<any> = []
+      let isVoter = false
+      option.option.voteInfo.forEach((vote: any) => {
+        if ((vote.voter + '') === (userId + '')) {
+          isVoter = true
+          let voteTemp = vote
+          voteTemp.transfer = true
+          votes.push(voteTemp)
+        } else votes.push(vote)
+      })
+      if (isVoter) optionFuncs.push(Option.findByIdAndUpdate(option.option._id, { voteInfo: votes }))
+    })
+
+    Promise.all(optionFuncs)
+
+    const transaction = new AdminUserTransaction({
+      description: 7,
+      from: "DAREME",
+      to: "USER",
+      user: userId,
+      dareme: daremeId,
+      donuts: donuts,
+      date: calcTime()
+    });
+
+    const results1 = await Promise.all([
+      transaction.save(),
+      DareMe.findByIdAndUpdate(daremeId, { wallet: dareme.wallet - donuts }),
+      User.findByIdAndUpdate(userId, { wallet: userWallet }, { new: true })
+    ])
+
+    io.to(user.email).emit('wallet_change', userWallet)
+    const updatedUser = results1[2]
+
+    const payload = {
+      id: updatedUser._id,
+      name: updatedUser.name,
+      avatar: updatedUser.avatar,
+      role: updatedUser.role,
+      email: updatedUser.email,
+      wallet: updatedUser.wallet,
+      personalisedUrl: updatedUser.personalisedUrl,
+      language: updatedUser.language,
+      category: updatedUser.categories,
+      new_notification: updatedUser.new_notification,
+    };
+
+    return res.status(200).json({ success: true, user: payload })
+  } catch (err) {
+    console.log(err)
+  }
+}
+
+export const supportRefund = async (req: Request, res: Response) => {
+  try {
+    const { daremeId } = req.params
+    const { userId } = req.body
+
+    const dareme = await DareMe.findById(daremeId).populate({ path: 'options.option' })
+    const options = dareme.options
+
+    let optionFuncs: Array<any> = []
+    options.forEach((option: any) => {
+      let votes: Array<any> = []
+      let isVoter = false
+      option.option.voteInfo.forEach((vote: any) => {
+        if ((vote.voter + '') === (userId + '')) {
+          isVoter = true
+          let voteTemp = vote
+          voteTemp.transfer = true
+          votes.push(voteTemp)
+        } else votes.push(vote)
+      })
+      if (isVoter) optionFuncs.push(Option.findByIdAndUpdate(option.option._id, { voteInfo: votes }))
+    })
+
+    Promise.all(optionFuncs)
+
+    return res.status(200).json({ success: true })
   } catch (err) {
     console.log(err)
   }
