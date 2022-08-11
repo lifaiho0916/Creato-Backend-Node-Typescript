@@ -1,9 +1,10 @@
-import { Request, Response } from 'express';
-import Stripe from "stripe";
-import CONSTANT from "../utils/constant";
-import User from '../models/User';
-import AdminWallet from '../models/AdminWallet';
-import AdminUserTransaction from '../models/AdminUserTransaction';
+import { Request, Response } from 'express'
+import Stripe from "stripe"
+import CONSTANT from "../utils/constant"
+import User from '../models/User'
+import AdminWallet from '../models/AdminWallet'
+import AdminUserTransaction from '../models/AdminUserTransaction'
+import Payment from '../models/Payment'
 
 const stripe = new Stripe(
     CONSTANT.STRIPE_SECRET_KEY,
@@ -15,6 +16,69 @@ function calcTime() {
     var utc = d.getTime();
     var nd = new Date(utc + (3600000 * 8));
     return nd;
+}
+
+export const connectStripe = async (req: Request, res: Response) => {
+    try {
+        const { auth, userId } = req.body
+        const response: any = await stripe.oauth.token({
+            grant_type: 'authorization_code',
+            code: auth,
+        })
+
+        if (response.error) {
+            return res.status(200).json({ success: false })
+        }
+
+        const payment = await Payment.findOne({ owner: userId })
+
+        if (payment) {
+            await Payment.findByIdAndUpdate(payment._id, { stripe: response.stripe_user_id })
+        } else {
+            const newPayment = new Payment({
+                owner: userId,
+                stripe: response.stripe_user_id
+            })
+
+            await newPayment.save()
+        }
+
+        return res.status(200).json({ success: true })
+    } catch (err) {
+        console.log(err)
+    }
+}
+
+export const disconnectStripe = async (req: Request, res: Response) => {
+    try {
+        const { userId, clientId } = req.body
+        const account = await Payment.findOne({ owner: userId })
+
+        const response: any = await stripe.oauth.deauthorize({
+            client_id: clientId,
+            stripe_user_id: account.stripe,
+        })
+
+        if (response.error) {
+            return res.status(200).json({ success: false })
+        }
+
+        await Payment.findOneAndUpdate({ owner: userId }, { stripe: null })
+        return res.status(200).json({ success: true })
+    } catch (err) {
+        console.log(err)
+    }
+}
+
+export const getPaymentInfo = async (req: Request, res: Response) => {
+    try {
+        const { userId } = req.body
+        const payment = await Payment.findOne({ owner: userId })
+
+        return res.status(200).json({ success: true, payment: payment })
+    } catch (err) {
+        console.log(err)
+    }
 }
 
 export const buyDonuts = async (req: Request, res: Response) => {
