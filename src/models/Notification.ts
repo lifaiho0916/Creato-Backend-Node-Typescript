@@ -3,6 +3,7 @@ import User from "./User";
 import Dareme from "./DareMe";
 import Fundme from "./FundMe";
 import Option from './Option';
+import Tip from './Tip'
 import NotificationType from './NotificationType';
 
 const NotificationSchema = new mongoose.Schema({
@@ -45,6 +46,10 @@ const NotificationSchema = new mongoose.Schema({
   option: {
     type: Schema.Types.ObjectId,
     ref: Option
+  },
+  tip: {
+    type: Schema.Types.ObjectId,
+    ref: Tip
   },
   donuts: {
     type: Number

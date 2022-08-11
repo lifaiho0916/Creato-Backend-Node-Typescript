@@ -5,6 +5,7 @@ import Tip from '../models/Tip';
 import AdminWallet from '../models/AdminWallet';
 import AdminUserTransaction from "../models/AdminUserTransaction";
 import CONSTANT from '../utils/constant';
+import { addNewNotification } from '../controllers/notificationController'
 
 function calcTime() {
     var d = new Date();
@@ -71,8 +72,21 @@ export const tipUser = async (req: Request, res: Response) => {
                 newTransaction2.save()
             ]);
 
-            req.body.io.to(updateState[1].email).emit("wallet_change", updateState[1].wallet);
-            req.body.io.to("ADMIN").emit("wallet_change", updateState[2].wallet);
+            req.body.io.to(updateState[0].email).emit("wallet_change", updateState[0].wallet)
+            req.body.io.to(updateState[1].email).emit("wallet_change", updateState[1].wallet)
+            req.body.io.to("ADMIN").emit("wallet_change", updateState[2].wallet)
+
+            addNewNotification(req.body.io, {
+                section: 'Tipping',
+                trigger: 'After make tipping sucessfully',
+                tip: updateState[3]
+            })
+
+            addNewNotification(req.body.io, {
+                section: 'Tipping',
+                trigger: 'After received Donuts from tipping',
+                tip: updateState[3]
+            })
 
             const updateUser = updateState[0];
             const payload = {
@@ -133,10 +147,16 @@ export const tipUser = async (req: Request, res: Response) => {
                 newTip.save(),
                 newTransaction1.save(),
                 newTransaction2.save()
-            ]);
+            ])
 
-            req.body.io.to(updateState[0].email).emit("wallet_change", updateState[0].wallet);
-            req.body.io.to("ADMIN").emit("wallet_change", updateState[1].wallet);
+            req.body.io.to(updateState[0].email).emit("wallet_change", updateState[0].wallet)
+            req.body.io.to("ADMIN").emit("wallet_change", updateState[1].wallet)
+
+            addNewNotification(req.body.io, {
+                section: 'Tipping',
+                trigger: 'After received Donuts from tipping',
+                tip: updateState[2]
+            })
 
             return res.status(200).json({ success: true });
         }
