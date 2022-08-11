@@ -60,6 +60,7 @@ export const getNotificationHistory = async (req: Request, res: Response) => {
 export const getNotifications = async (req: Request, res: Response) => {
   try {
     const { userId } = req.body;
+    const user = await User.findById(userId)
 
     const notifications = await Notification.find({ receiverInfo: { $elemMatch: { receiver: userId } } })
       .populate([
@@ -75,7 +76,9 @@ export const getNotifications = async (req: Request, res: Response) => {
     let count = 0;
 
     notifications.forEach((notification: any) => {
-      let msg = notification.section.info[notification.index].contentEn;
+      let msg = notification.section.info[notification.index].contentEn
+      if(user.language === 'CH' && notification.section.info[notification.index].contentCh && notification.section.info[notification.index].contentCh !== '')
+        msg = notification.section.info[notification.index].contentCh
       console.log()
       if (msg.indexOf('DAREME_TITLE') !== -1) msg = msg.replace(/DAREME_TITLE/g, `<strong>${notification.dareme.title}</strong>`);
       if (msg.indexOf('FUNDME_TITLE') !== -1) msg = msg.replace('FUNDME_TITLE', `<strong>${notification.fundme.title}</strong>`);

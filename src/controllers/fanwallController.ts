@@ -448,7 +448,7 @@ export const getFanwallsByPersonalUrl = async (req: Request, res: Response) => {
     try {
         const { url } = req.body;
         let resFanwalls = <Array<any>>[];
-        const user = await User.findOne({ personalisedUrl: url });
+        const user = await User.findOne({ personalisedUrl: url }).select({ 'name': 1, 'avatar': 1, 'personalisedUrl': 1, 'categories': 1, 'subscribed_users': 1, 'tipFunction': 1 });
         const rewardFanwalls = await Fanwall.find({ posted: true }).where('owner').ne(user._id)
             .populate({ path: 'writer', select: { 'avatar': 1, 'name': 1, 'personalisedUrl': 1 } })
             .populate([
@@ -626,7 +626,7 @@ export const getFanwallsByPersonalUrl = async (req: Request, res: Response) => {
             return first.tip < second.tip ? 1 : first.tip > second.tip ? -1 :
                 first.date > second.date ? -1 : first.date < second.date ? 1 : 0;
         });
-        return res.status(200).json({ success: true, fanwalls: resFanwalls, tips: resultTips });
+        return res.status(200).json({ success: true, fanwalls: resFanwalls, tips: resultTips, user: user });
     } catch (err) {
         console.log(err);
     }
