@@ -334,6 +334,7 @@ export const checkOngoingdaremes = async (io: any) => {
       if ((new Date(dareme.date).getTime() + 1000 * 3600 * 24 * dareme.deadline) < new Date(calcTime()).getTime()) { //// dareme is finished?
 
         const daremeInfo = await DareMe.findByIdAndUpdate(dareme._id, { finished: true }, { new: true }).populate({ path: 'options.option' }) //// Finish DareMe
+        await User.findByIdAndUpdate(dareme.owner, { tipFunction: true })
         const options = daremeInfo.options.filter((option: any) => option.option.status === 1) // accpeted options
         const maxOption: any = options.reduce((prev: any, current: any) => (prev.option.donuts > current.option.donuts) ? prev : current) /// top donuts options
         const filters = options.filter((option: any) => option.option.donuts === maxOption.option.donuts) /// get count of top donuts options
@@ -427,12 +428,8 @@ export const checkOngoingdaremes = async (io: any) => {
 export const publishDareme = async (req: Request, res: Response) => {
   try {
     const { userId } = req.body;
-    const result = await Promise.all([
-      User.findById(userId),
-      DareMe.findOne({ owner: userId, published: false })
-    ]);
-    if (result[0].tipFunction === false) await User.findByIdAndUpdate(userId, { tipFunction: true });
-    const updatedDareme = await DareMe.findByIdAndUpdate(result[1]._id, { published: true, date: calcTime() }, { new: true });
+    const dareme = await DareMe.findOne({ owner: userId, published: false })
+    const updatedDareme = await DareMe.findByIdAndUpdate(dareme._id, { published: true, date: calcTime() }, { new: true });
 
     addNewNotification(req.body.io, {
       section: 'Create DareMe',

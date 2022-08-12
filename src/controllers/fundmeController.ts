@@ -95,13 +95,8 @@ export const deleteFundme = async (req: Request, res: Response) => {
 export const publishFundme = async (req: Request, res: Response) => {
     try {
         const { userId } = req.body;
-        const result = await Promise.all([
-            User.findById(userId),
-            FundMe.findOne({ owner: userId, published: false })
-        ]);
-
-        if (result[0].tipFunction === false) await User.findByIdAndUpdate(userId, { tipFunction: true });
-        const updatedFundme = await FundMe.findByIdAndUpdate(result[1]._id, { published: true, date: calcTime() }, { new: true });
+        const fundme = await FundMe.findOne({ owner: userId, published: false })
+        const updatedFundme = await FundMe.findByIdAndUpdate(fundme._id, { published: true, date: calcTime() }, { new: true });
 
         addNewNotification(req.body.io, {
             section: 'Create FundMe',
@@ -281,7 +276,8 @@ export const checkOngoingfundmes = async (io: any) => {
         const fundmes = await FundMe.find({ published: true }).where('finished').equals(false);
         for (const fundme of fundmes) {
             if ((new Date(fundme.date).getTime() + 1000 * 3600 * 24 * fundme.deadline) < new Date(calcTime()).getTime()) {
-                await FundMe.findByIdAndUpdate(fundme._id, { finished: true }, { new: true });
+                await FundMe.findByIdAndUpdate(fundme._id, { finished: true }, { new: true })
+                await User.findByIdAndUpdate(fundme.owner, { tipFunction: true })
             }
         }
     } catch (err: any) {

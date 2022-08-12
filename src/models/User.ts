@@ -52,6 +52,9 @@ const UserSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  firstLogin: {
+    type: Boolean
+  },
   date: {
     type: Date,
   }

@@ -9,6 +9,7 @@ import { Request, Response } from "express";
 //Routers
 import { checkOngoingdaremes } from "./controllers/daremeController";
 import { checkOngoingfundmes } from "./controllers/fundmeController";
+import { setFirstLogin } from "./controllers/authController"
 
 import auth from "./Routes/api/auth";
 import dareme from "./Routes/api/dareme";
@@ -74,7 +75,7 @@ server.listen(PORT, () => {
 cron.schedule("* * * * *", () => checkOngoingdaremes(io));
 cron.schedule("* * * * *", () => checkOngoingfundmes(io));
 // cron.schedule("* * * * *",() => checkOngoingfundmes(io));
-// cron.schedule("59 23 * * *", () => newNotification(io), {
-//   scheduled: true,
-//   timezone: "Asia/Hong_Kong",
-// });
+cron.schedule("59 23 * * *", () => setFirstLogin(), {
+  scheduled: true,
+  timezone: "Asia/Hong_Kong",
+});

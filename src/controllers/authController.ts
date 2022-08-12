@@ -24,6 +24,19 @@ function calcTime() {
     return nd;
 }
 
+export const setFirstLogin = async () => {
+    try {
+        const users = await User.find()
+        let setFuncs: Array<any> = []
+
+        for (const user of users) setFuncs.push(User.findByIdAndUpdate(user._id, { firstLogin: false }))
+
+        Promise.all(setFuncs)
+    } catch (err) {
+        console.log(err)
+    }
+}
+
 //-------------Google Signin---------------------------
 export const googleSignin = async (req: Request, res: Response) => {
     try {
@@ -68,7 +81,10 @@ export const googleSignin = async (req: Request, res: Response) => {
                                 $name: user.name,
                                 $email: user.email,
                             });
-                            return res.status(200).json({ user: payload, token: token });
+
+                            const firstLogin = user.firstLogin
+                            User.findByIdAndUpdate(user._id, { firstLogin: true }).exec()
+                            return res.status(200).json({ user: payload, token: token, firstLogin: firstLogin });
                         }
                     );
                 } else return res.status(400).json({ error: "Error Google Login" });
