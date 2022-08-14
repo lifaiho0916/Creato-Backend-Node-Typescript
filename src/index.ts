@@ -69,13 +69,13 @@ app.use(express.static("public"));
 // });
 
 server.listen(PORT, () => {
-  console.log(`The Server is up and running on PORT ${PORT}`);
+  console.log(`The Server is up and running on PORT ${PORT}`)
 });
 
-cron.schedule("* * * * *", () => checkOngoingdaremes(io));
-cron.schedule("* * * * *", () => checkOngoingfundmes(io));
-// cron.schedule("* * * * *",() => checkOngoingfundmes(io));
-cron.schedule("59 23 * * *", () => setFirstLogin(), {
-  scheduled: true,
-  timezone: "Asia/Hong_Kong",
-});
+cron.schedule("* * * * *", () => checkOngoingdaremes(io))
+cron.schedule("* * * * *", () => checkOngoingfundmes(io))
+cron.schedule("* * * * *", () => setFirstLogin())
+// cron.schedule("59 23 * * *", () => setFirstLogin(), {
+//   scheduled: true,
+//   timezone: "Asia/Hong_Kong",
+// })

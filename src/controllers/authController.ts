@@ -28,9 +28,7 @@ export const setFirstLogin = async () => {
     try {
         const users = await User.find()
         let setFuncs: Array<any> = []
-
         for (const user of users) setFuncs.push(User.findByIdAndUpdate(user._id, { firstLogin: false }))
-
         Promise.all(setFuncs)
     } catch (err) {
         console.log(err)

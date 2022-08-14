@@ -1170,6 +1170,7 @@ export const supportCreator = async (req: Request, res: Response) => {
     const superfan = updatedDareme.reward ? updatedDareme.reward : 50;
 
     if (amount < superfan) {
+      let resUser = null
       if (amount === 1) {
         const adminWallet = await AdminWallet.findOne({ admin: "ADMIN" });
         const adminDonuts = adminWallet.wallet - 1;
@@ -1186,6 +1187,23 @@ export const supportCreator = async (req: Request, res: Response) => {
           date: calcTime()
         });
         await transaction.save();
+      } else {
+        let wallet = user.wallet - amount;
+        const updatedUser = await User.findByIdAndUpdate(userId, { wallet: wallet }, { new: true });
+        const payload = {
+          id: updatedUser._id,
+          name: updatedUser.name,
+          avatar: updatedUser.avatar,
+          role: updatedUser.role,
+          email: updatedUser.email,
+          wallet: updatedUser.wallet,
+          personalisedUrl: updatedUser.personalisedUrl,
+          language: updatedUser.language,
+          category: updatedUser.categories,
+          new_notification: updatedUser.new_notification,
+        };
+        req.body.io.to(updatedUser.email).emit("wallet_change", updatedUser.wallet);
+        resUser = payload
       }
       /////////////// NON SUPERFAN transaction /////////////
 
@@ -1197,7 +1215,7 @@ export const supportCreator = async (req: Request, res: Response) => {
         voterId: userId,
         donuts: amount
       });
-      return res.status(200).json({ success: true, dareme: resDareme, option: optionNew });
+      return res.status(200).json({ success: true, dareme: resDareme, option: optionNew, user: resUser });
     } else {
       let wallet = user.wallet - amount;
       const updatedUser = await User.findByIdAndUpdate(userId, { wallet: wallet }, { new: true });
