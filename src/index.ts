@@ -74,8 +74,7 @@ server.listen(PORT, () => {
 
 cron.schedule("* * * * *", () => checkOngoingdaremes(io))
 cron.schedule("* * * * *", () => checkOngoingfundmes(io))
-cron.schedule("* * * * *", () => setFirstLogin())
-// cron.schedule("59 23 * * *", () => setFirstLogin(), {
-//   scheduled: true,
-//   timezone: "Asia/Hong_Kong",
-// })
+cron.schedule("59 23 * * *", () => setFirstLogin(), {
+  scheduled: true,
+  timezone: "Asia/Hong_Kong",
+})
