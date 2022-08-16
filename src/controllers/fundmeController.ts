@@ -217,7 +217,8 @@ export const fundCreator = async (req: Request, res: Response) => {
           fundme: fundmeId,
           donuts: 1,
           date: calcTime()
-        });
+        })
+
         await transaction.save();
       } else {
         const userWallet = user.wallet - amount;
@@ -236,7 +237,18 @@ export const fundCreator = async (req: Request, res: Response) => {
         };
         req.body.io.to(updatedUser.email).emit("wallet_change", updatedUser.wallet);
         resUser = payload
-        ///////// None Superfan transaction /////////////////
+
+        const transaction = new AdminUserTransaction({
+          description: 11,
+          from: "USER",
+          to: "FUNDME",
+          user: userId,
+          fundme: fundmeId,
+          donuts: amount,
+          date: calcTime()
+        })
+
+        await transaction.save()
       }
 
       addNewNotification(req.body.io, {

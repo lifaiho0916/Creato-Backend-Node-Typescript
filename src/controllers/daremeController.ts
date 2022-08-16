@@ -1172,9 +1172,8 @@ export const supportCreator = async (req: Request, res: Response) => {
     if (amount < superfan) {
       let resUser = null
       if (amount === 1) {
-        const adminWallet = await AdminWallet.findOne({ admin: "ADMIN" });
-        const adminDonuts = adminWallet.wallet - 1;
-        await AdminWallet.findOneAndUpdate({ admin: "ADMIN" }, { wallet: adminDonuts });
+        const adminWallet = await AdminWallet.findOne({ admin: "ADMIN" })
+        const adminDonuts = adminWallet.wallet - 1
         req.body.io.to("ADMIN").emit("wallet_change", adminDonuts);
 
         const transaction = new AdminUserTransaction({
@@ -1185,8 +1184,12 @@ export const supportCreator = async (req: Request, res: Response) => {
           dareme: daremeId,
           donuts: 1,
           date: calcTime()
-        });
-        await transaction.save();
+        })
+
+        await Promise.all([
+          AdminWallet.findOneAndUpdate({ admin: "ADMIN" }, { wallet: adminDonuts }),
+          transaction.save()
+        ])
       } else {
         let wallet = user.wallet - amount;
         const updatedUser = await User.findByIdAndUpdate(userId, { wallet: wallet }, { new: true });
@@ -1204,8 +1207,19 @@ export const supportCreator = async (req: Request, res: Response) => {
         };
         req.body.io.to(updatedUser.email).emit("wallet_change", updatedUser.wallet);
         resUser = payload
+
+        const transaction = new AdminUserTransaction({
+          description: 11,
+          from: "USER",
+          to: "DAREME",
+          user: userId,
+          dareme: daremeId,
+          donuts: amount,
+          date: calcTime()
+        })
+
+        await transaction.save()
       }
-      /////////////// NON SUPERFAN transaction /////////////
 
       addNewNotification(req.body.io, {
         section: 'Ongoing DareMe',
