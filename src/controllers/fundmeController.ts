@@ -435,7 +435,7 @@ export const updateFundMe = async (req: Request, res: Response) => {
       category: fundme.category,
       teaser: fundme.teaserFile ? fundme.teaserFile : resFundme.teaser,
       cover: fundme.coverFile ? fundme.coverFile : resFundme.cover,
-      sizeType: fundme.teaserType !== null ? fundme.teaserType : resFundme.sizeType
+      sizeType: fundme.sizeType ? fundme.sizeType : resFundme.sizeType
     });
     return res.status(200).json({ success: true });
   } catch (err) {
