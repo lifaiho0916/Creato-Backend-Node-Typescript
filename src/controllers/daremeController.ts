@@ -344,9 +344,7 @@ export const checkOngoingdaremes = async (io: any) => {
 
           await Option.findByIdAndUpdate(maxOption.option._id, { win: true }) // win option
           const noWinOptions = options.filter((option: any) => option.option.donuts < maxOption.option.donuts) /// non-win options
-
           let votes: Array<any> = []
-          // let minusDonuts = 0 /// old
 
           for (const option of noWinOptions) {
             for (const vote of option.option.voteInfo) {
@@ -366,31 +364,8 @@ export const checkOngoingdaremes = async (io: any) => {
                   donuts: vote.donuts
                 })
               }
-
-              // const voter = await User.findById(vote.voter);
-              // let wallet = voter.wallet + vote.donuts;
-              // await User.findByIdAndUpdate(vote.voter, { wallet: wallet });
-              // io.to(voter.email).emit("wallet_change", wallet);
-              // minusDonuts += vote.donuts;
-              // const transaction = new AdminUserTransaction({
-              //   description: 7,
-              //   from: "DAREME",
-              //   to: "USER",
-              //   user: vote.voter,
-              //   dareme: dareme._id,
-              //   donuts: vote.donuts,
-              //   date: calcTime()
-              // });
-              // await transaction.save();
             }
           }
-
-          //OLD
-          // const adminWallet = await AdminWallet.findOne({ admin: "ADMIN" })
-          // const adminDonuts = adminWallet.wallet - minusDonuts
-          // io.to("ADMIN").emit("wallet_change", adminDonuts)
-          // await AdminWallet.findOneAndUpdate({ admin: 'ADMIN' }, { wallet: adminDonuts })
-          //OLD
 
           ///////////////// Notification Part /////////////////////
 
