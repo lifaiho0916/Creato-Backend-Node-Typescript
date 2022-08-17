@@ -55,6 +55,9 @@ const UserSchema = new mongoose.Schema({
   firstLogin: {
     type: Boolean
   },
+  referralLink: {
+    type: String
+  },
   date: {
     type: Date,
   }

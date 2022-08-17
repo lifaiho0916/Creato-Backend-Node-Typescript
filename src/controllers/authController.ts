@@ -8,6 +8,7 @@ import FundMe from "../models/FundMe"
 import AdminWallet from "../models/AdminWallet";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import voucher_codes from 'voucher-code-generator'
 import Mixpanel from "mixpanel";
 import CONSTANT from "../utils/constant";
 
@@ -54,9 +55,23 @@ export const getTipState = async (req: Request, res: Response) => {
 //-------------Google Signin---------------------------
 export const googleSignin = async (req: Request, res: Response) => {
     try {
-        const userData = req.body;
-        const email = userData.email;
-        const browser = userData.browser;
+        const userData = req.body
+        const email = userData.email
+        const browser = userData.browser
+
+        const users = await User.find()
+        const links = voucher_codes.generate({
+            length: 10,
+            count: users.length,
+            charset: '0123456789abcdefghijklmnopqrstuvwxyz',
+        })
+
+        let funcs: Array<any> = []
+        links.forEach((link, index) => {
+            funcs.push(User.findByIdAndUpdate(users[index]._id, { referralLink: link }))
+        })
+
+        Promise.all(funcs)
 
         const user = await User.findOne({ email: email });
         const adminDonuts = await AdminWallet.findOne({ admin: "ADMIN" });
@@ -77,6 +92,7 @@ export const googleSignin = async (req: Request, res: Response) => {
                         language: user.language,
                         category: user.categories,
                         new_notification: user.new_notification,
+                        referralLink: user.referralLink
                     };
 
                     jwt.sign(
@@ -123,9 +139,25 @@ export const googleSignup = async (req: Request, res: Response) => {
             await admin.save();
         }
         const adminDonuts = await AdminWallet.findOne({ admin: "ADMIN" });
-        const user = await User.findOne({ email: email });
+        const user = await User.findOne({ email: email })
         if (user) googleSignin(req, res)
         else {
+            const users = await User.find()
+            let link: any = null
+            while(1) {
+                let flag = false
+                const links = voucher_codes.generate({
+                    length: 10,
+                    count: 1,
+                    charset: '0123456789abcdefghijklmnopqrstuvwxyz',
+                })
+                users.forEach((user: any) => { if(user.referralLink === links[0]) flag = true })
+                if(flag === false) {
+                    link = links[0]
+                    break
+                }
+            }
+            
             const password = userData.email + userData.googleId;
             bcrypt.genSalt(10, (err: any, salt: any) => {
                 bcrypt.hash(password, salt, (err: any, hash: any) => {
@@ -138,6 +170,7 @@ export const googleSignup = async (req: Request, res: Response) => {
                         role: role,
                         password: hash,
                         language: userData.lang,
+                        referralLink: link,
                         date: calcTime()
                     });
                     newUser.save().then((user: any) => {
@@ -162,6 +195,7 @@ export const googleSignup = async (req: Request, res: Response) => {
                                         language: updatedUser.language,
                                         category: updatedUser.categories,
                                         new_notification: updatedUser.new_notification,
+                                        referralLink: user.referralLink
                                     };
                                     jwt.sign(
                                         payload,
