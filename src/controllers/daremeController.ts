@@ -150,6 +150,7 @@ export const getDaremeDetails = async (req: Request, res: Response) => {
         sizeType: dareme.sizeType,
         options: dareme.options,
         finished: dareme.finished,
+        coverIndex: dareme.coverIndex,
         show: dareme.show,
         reward: dareme.reward,
         rewardText: dareme.rewardText,
@@ -1456,18 +1457,23 @@ export const updateDareMe = async (req: Request, res: Response) => {
         if (err) throw err;
       });
     }
+    let funcs = []
     if (dareme.options) {
-      await Option.findByIdAndUpdate(dareme.options[0].option._id, { title: dareme.options[0].option.title });
-      await Option.findByIdAndUpdate(dareme.options[1].option._id, { title: dareme.options[1].option.title });
+      funcs.push(Option.findByIdAndUpdate(dareme.options[0].option._id, { title: dareme.options[0].option.title }))
+      funcs.push(Option.findByIdAndUpdate(dareme.options[1].option._id, { title: dareme.options[1].option.title }))
     }
-    await DareMe.findByIdAndUpdate(daremeId, {
-      title: dareme.title,
-      category: dareme.category,
-      teaser: dareme.teaserFile ? dareme.teaserFile : resDareme.teaser,
-      cover: dareme.coverFile ? dareme.coverFile : resDareme.cover,
-      sizeType: dareme.teaserType !== null ? dareme.teaserType : resDareme.sizeType
-    });
-    return res.status(200).json({ success: true });
+
+    funcs.push(
+      DareMe.findByIdAndUpdate(daremeId, {
+        title: dareme.title,
+        category: dareme.category,
+        teaser: dareme.teaserFile ? dareme.teaserFile : resDareme.teaser,
+        cover: dareme.coverFile ? dareme.coverFile : resDareme.cover,
+        sizeType: dareme.sizeType ? dareme.sizeType : resDareme.sizeType
+      })
+    )
+    await Promise.all(funcs)
+    return res.status(200).json({ success: true })
   } catch (err) {
     console.log(err);
   }
