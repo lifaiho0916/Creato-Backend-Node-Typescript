@@ -329,3 +329,13 @@ export const getActiveTipUsers = async (req: Request, res: Response) => {
         console.log(err);
     }
 }
+
+export const setTipFunctionByUser = async (req: Request, res: Response) => {
+    try {
+        const { tipValue, userId } = req.body
+        await User.findByIdAndUpdate(userId, { tipFunction: tipValue }, { new: true })
+        return res.status(200).json({ success: true })
+    } catch (err) {
+        console.log(err)
+    }
+}

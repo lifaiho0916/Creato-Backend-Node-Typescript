@@ -15,7 +15,8 @@ import {
     getUsersList,
     getExistName,
     getExistURL,
-    getUserFromUrl
+    getUserFromUrl,
+    getTipState
 } from '../../controllers/authController';
 
 router.post("/googleSignin", googleSignin);
@@ -29,6 +30,7 @@ router.post('/setting/lang', auth, setLanguage);
 router.post('/exist_name', auth ,getExistName);
 router.post('/exist_url', auth ,getExistURL);
 router.post('/userFromUrl', getUserFromUrl);
+router.get('/tip_state', auth, getTipState)
 
 router.post('/users', auth, getUsersList);
 

@@ -4,6 +4,7 @@ import fs from "fs";
 import multer from "multer";
 import User from "../models/User";
 import DareMe from "../models/DareMe";
+import FundMe from "../models/FundMe"
 import AdminWallet from "../models/AdminWallet";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
@@ -30,6 +31,21 @@ export const setFirstLogin = async () => {
         let setFuncs: Array<any> = []
         for (const user of users) setFuncs.push(User.findByIdAndUpdate(user._id, { firstLogin: false }))
         Promise.all(setFuncs)
+    } catch (err) {
+        console.log(err)
+    }
+}
+
+export const getTipState = async (req: Request, res: Response) => {
+    try {
+        const { userId } = req.body
+        const result = await Promise.all([
+            DareMe.find({ owner: userId, finished: true }),
+            FundMe.find({ owner: userId, finished: true }),
+            User.findById(userId)
+        ])
+        const cnt = result[0].length + result[1].length
+        return res.status(200).json({ success: true, cnt: cnt, tipFunction: result[2].tipFunction })
     } catch (err) {
         console.log(err)
     }

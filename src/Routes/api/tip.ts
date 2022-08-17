@@ -13,7 +13,8 @@ import {
     getTipData,
     updateTip,
     deleteTip,
-    getActiveTipUsers
+    getActiveTipUsers,
+    setTipFunctionByUser
 } from '../../controllers/tipController';
 
 router.post("/", tipUser);
@@ -26,5 +27,6 @@ router.get('/:id', auth, getTipData);
 router.post('/:id/update', auth, updateTip);
 router.delete('/:id', auth, deleteTip);
 router.get('/users/tipactive', auth, getActiveTipUsers);
+router.post('/profile_edit/tipsetting', auth, setTipFunctionByUser)
 
 export default router;
