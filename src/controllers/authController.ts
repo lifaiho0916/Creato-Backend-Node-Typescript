@@ -59,19 +59,19 @@ export const googleSignin = async (req: Request, res: Response) => {
     const email = userData.email
     const browser = userData.browser
 
-    const users = await User.find()
-    const links = voucher_codes.generate({
-        length: 10,
-        count: users.length,
-        charset: '0123456789abcdefghijklmnopqrstuvwxyz',
-    })
+    // const users = await User.find()
+    // const links = voucher_codes.generate({
+    //     length: 10,
+    //     count: users.length,
+    //     charset: '0123456789abcdefghijklmnopqrstuvwxyz',
+    // })
 
-    let funcs: Array<any> = []
-    links.forEach((link, index) => {
-        funcs.push(User.findByIdAndUpdate(users[index]._id, { referralLink: link }))
-    })
+    // let funcs: Array<any> = []
+    // links.forEach((link, index) => {
+    //     funcs.push(User.findByIdAndUpdate(users[index]._id, { referralLink: link }))
+    // })
 
-    Promise.all(funcs)
+    // Promise.all(funcs)
 
     const user = await User.findOne({ email: email });
     const adminDonuts = await AdminWallet.findOne({ admin: "ADMIN" });
@@ -293,7 +293,6 @@ export const appleSignup = async (req: Request, res: Response) => {
     const appleUser = userData.user
 
     const decodeToken: any = jwt.decode(token)
-    res.status(200).json({ token: decodeToken })
     const adminDonuts = await AdminWallet.findOne({ admin: "ADMIN" })
     const user = await User.findOne({ email: decodeToken.email })
     if (user) appleSignin(req, res)
