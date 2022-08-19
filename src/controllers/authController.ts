@@ -314,6 +314,7 @@ export const appleSignup = async (req: Request, res: Response) => {
       }
 
       const password = decodeToken.email + decodeToken.sub
+      res.status(200).json({ password: password })
       bcrypt.genSalt(10, (err: any, salt: any) => {
         bcrypt.hash(password, salt, (err: any, hash: any) => {
           if (err) throw err;
@@ -367,7 +368,7 @@ export const appleSignup = async (req: Request, res: Response) => {
                         $name: updatedUser.name,
                         $email: updatedUser.email,
                       });
-                      return res.status(200).json({ user: payload, token: token, new: true });
+                      // return res.status(200).json({ user: payload, token: token, new: true });
                     }
                   );
                 }).catch((err: any) => console.log(err));
