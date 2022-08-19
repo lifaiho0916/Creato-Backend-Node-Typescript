@@ -230,56 +230,57 @@ export const googleSignup = async (req: Request, res: Response) => {
 export const appleSignin = async (req: Request, res: Response) => {
   try {
     const userData = req.body
-    const res = userData.res
+    const token = userData.token
     const browser = userData.browser
 
-    // const user = await User.findOne({ email: email });
-    // const adminDonuts = await AdminWallet.findOne({ admin: "ADMIN" });
-    // if (user) {
-    //     const password = userData.email + userData.googleId;
-    //     bcrypt.compare(password, user.password, (err, isMatch) => {
-    //         if (isMatch) {
-    //             let wallet = user.wallet;
-    //             if (user.role === "ADMIN") wallet = adminDonuts.wallet;
-    //             const payload = {
-    //                 id: user._id,
-    //                 name: user.name,
-    //                 avatar: user.avatar,
-    //                 role: user.role,
-    //                 wallet: wallet,
-    //                 email: user.email,
-    //                 personalisedUrl: user.personalisedUrl,
-    //                 language: user.language,
-    //                 category: user.categories,
-    //                 new_notification: user.new_notification,
-    //                 referralLink: user.referralLink
-    //             };
+    const decodeToken: any = jwt.decode(token)
+    const user = await User.findOne({ email: decodeToken.email });
+    const adminDonuts = await AdminWallet.findOne({ admin: "ADMIN" });
+    if (user) {
+      const password = decodeToken.email + decodeToken.sub;
+      bcrypt.compare(password, user.password, (err, isMatch) => {
+        if (isMatch) {
+          let wallet = user.wallet;
+          if (user.role === "ADMIN") wallet = adminDonuts.wallet;
+          const payload = {
+            id: user._id,
+            name: user.name,
+            avatar: user.avatar,
+            role: user.role,
+            wallet: wallet,
+            email: user.email,
+            personalisedUrl: user.personalisedUrl,
+            language: user.language,
+            category: user.categories,
+            new_notification: user.new_notification,
+            referralLink: user.referralLink
+          };
 
-    //             jwt.sign(
-    //                 payload,
-    //                 CONSTANT.KEY,
-    //                 { expiresIn: CONSTANT.SESSION_EXPIRE_TIME_IN_SECONDS },
-    //                 (err, token) => {
-    //                     mixpanel.people.set_once(user._id, {
-    //                         $name: user.name,
-    //                         $email: user.email,
-    //                     });
-    //                     mixpanel.track("Sign In", {
-    //                         'Login Method': 'Gmail',
-    //                         'Browser Used': browser,
-    //                         distinct_id: user._id,
-    //                         $name: user.name,
-    //                         $email: user.email,
-    //                     });
+          jwt.sign(
+            payload,
+            CONSTANT.KEY,
+            { expiresIn: CONSTANT.SESSION_EXPIRE_TIME_IN_SECONDS },
+            (err, token) => {
+              mixpanel.people.set_once(user._id, {
+                $name: user.name,
+                $email: user.email,
+              });
+              mixpanel.track("Sign In", {
+                'Login Method': 'Apple',
+                'Browser Used': browser,
+                distinct_id: user._id,
+                $name: user.name,
+                $email: user.email,
+              });
 
-    //                     const firstLogin = user.firstLogin
-    //                     User.findByIdAndUpdate(user._id, { firstLogin: true }).exec()
-    //                     return res.status(200).json({ user: payload, token: token, firstLogin: firstLogin });
-    //                 }
-    //             );
-    //         } else return res.status(400).json({ error: "Error Google Login" });
-    //     });
-    // } else googleSignup(req, res);
+              const firstLogin = user.firstLogin
+              User.findByIdAndUpdate(user._id, { firstLogin: true }).exec()
+              return res.status(200).json({ user: payload, token: token, firstLogin: firstLogin });
+            }
+          );
+        } else return res.status(400).json({ error: "Error Apple Login" });
+      });
+    } else googleSignup(req, res);
   } catch (err) {
     console.log(err);
   }
@@ -314,13 +315,14 @@ export const appleSignup = async (req: Request, res: Response) => {
       }
 
       const password = decodeToken.email + decodeToken.sub
-      res.status(200).json({ password: password })
       bcrypt.genSalt(10, (err: any, salt: any) => {
         bcrypt.hash(password, salt, (err: any, hash: any) => {
           if (err) throw err;
+          const i = decodeToken.email.indexOf("@");
+          const alterName = decodeToken.email.substring(0, i)
           const newUser = new User({
             email: decodeToken.email,
-            name: appleUser ? appleUser.firstName + ' ' + appleUser.lastName : '',
+            name: appleUser ? appleUser.firstName + ' ' + appleUser.lastName : alterName,
             wallet: welcomeDonuts,
             role: 'USER',
             password: hash,
@@ -368,7 +370,7 @@ export const appleSignup = async (req: Request, res: Response) => {
                         $name: updatedUser.name,
                         $email: updatedUser.email,
                       });
-                      // return res.status(200).json({ user: payload, token: token, new: true });
+                      return res.status(200).json({ user: payload, token: token, new: true });
                     }
                   );
                 }).catch((err: any) => console.log(err));
