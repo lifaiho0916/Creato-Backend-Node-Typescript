@@ -8,6 +8,8 @@ import {
     googleSignup,
     facebookSignin,
     facebookSignup,
+    appleSignin,
+    appleSignup,
     getAuthData,
     editAvatar,
     saveProfileInfo,
@@ -23,6 +25,8 @@ router.post("/googleSignin", googleSignin);
 router.post("/googleSignup", googleSignup);
 router.post("/facebookSignin", facebookSignin);
 router.post("/facebookSignup", facebookSignup);
+router.post("/appleSignin", appleSignin)
+router.post("/appleSignup", appleSignup)
 router.get("/get", auth, getAuthData);
 router.post("/avatar/upload", auth, editAvatar);
 router.post('/profile/save', auth ,saveProfileInfo);
