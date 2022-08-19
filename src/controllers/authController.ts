@@ -293,6 +293,7 @@ export const appleSignup = async (req: Request, res: Response) => {
     const appleUser = userData.user
 
     const decodeToken: any = jwt.decode(token)
+    res.status(200).json({ token: decodeToken })
     const adminDonuts = await AdminWallet.findOne({ admin: "ADMIN" })
     const user = await User.findOne({ email: decodeToken.email })
     if (user) appleSignin(req, res)
