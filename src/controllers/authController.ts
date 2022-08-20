@@ -280,7 +280,7 @@ export const appleSignin = async (req: Request, res: Response) => {
           );
         } else return res.status(400).json({ error: "Error Apple Login" });
       });
-    } else googleSignup(req, res);
+    } else appleSignup(req, res);
   } catch (err) {
     console.log(err);
   }
