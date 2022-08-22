@@ -117,7 +117,7 @@ export const googleSignin = async (req: Request, res: Response) => {
               return res.status(200).json({ user: payload, token: token, firstLogin: firstLogin });
             }
           );
-        } else return res.status(400).json({ error: "Error Google Login" });
+        } else return res.status(400).json({ error: 'sing-up methods error' })
       });
     } else googleSignup(req, res);
   } catch (err) {
@@ -131,13 +131,8 @@ export const googleSignup = async (req: Request, res: Response) => {
     const userData = req.body;
     const email = userData.email;
     const browser = userData.browser;
-    // const adminWallet = await AdminWallet.find({});
-    let role = "USER";
-    // if (adminWallet.length === 0) {
-    //   role = "ADMIN";
-    //   const admin = new AdminWallet({ admin: "ADMIN", date: calcTime() });
-    //   await admin.save();
-    // }
+    let role = "USER"
+
     const adminDonuts = await AdminWallet.findOne({ admin: "ADMIN" });
     const user = await User.findOne({ email: email })
     if (user) googleSignin(req, res)
@@ -278,7 +273,7 @@ export const appleSignin = async (req: Request, res: Response) => {
               return res.status(200).json({ user: payload, token: token, firstLogin: firstLogin });
             }
           );
-        } else return res.status(400).json({ error: "Error Apple Login" });
+        } else return res.status(400).json({ error: 'sing-up methods error' })
       });
     } else appleSignup(req, res);
   } catch (err) {
