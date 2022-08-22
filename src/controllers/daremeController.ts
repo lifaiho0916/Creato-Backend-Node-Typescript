@@ -132,7 +132,7 @@ export const getDaremeDetails = async (req: Request, res: Response) => {
         path: 'options.option',
         model: Option,
         populate: { path: 'writer', select: { '_id': 1, 'name': 1 } },
-        select: { '__v': 0, 'win': 0 },
+        select: { '__v': 0 },
       }).select({ 'published': 0, 'wallet': 0, '__v': 0 })
 
     if (dareme) {

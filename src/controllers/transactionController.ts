@@ -45,12 +45,12 @@ export const getTransactions = async (req: Request, res: Response) => {
         const fundmes = result[3];
         let fundmeDonuts = 0.0;
         fundmes.forEach((fundme: any) => {
-            fundmeDonuts += fundme.wallet;
+            fundmeDonuts = fundmeDonuts + fundme.empty ? 0 : fundme.wallet;
         })
 
         const resUsers = result[4];
         const transactions = result[5];
-        
+
         return res.status(200).json({
             success: true,
             users: resUsers,

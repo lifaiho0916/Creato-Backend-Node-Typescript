@@ -15,21 +15,21 @@ const ReferralLink = new mongoose.Schema({
     default: 0
   },
   invitedUsers: [{
-        newUser: {
-            type: Schema.Types.ObjectId,
-            ref: User
-        },
-        reward: {
-            type: Number
-        },
-        earned: {
-            type: Boolean
-        },
-        date: {
-            type: Date
-        }
+    _id: false,
+    newUser: {
+      type: Schema.Types.ObjectId,
+      ref: User
+    },
+    reward: {
+      type: Number
+    },
+    earned: {
+      type: Boolean
+    },
+    date: {
+      type: Date
     }
-  ]
+  }]
 });
 
 export default mongoose.model("referrallinks", ReferralLink);

@@ -6,6 +6,8 @@ import User from "../models/User";
 import DareMe from "../models/DareMe";
 import FundMe from "../models/FundMe"
 import AdminWallet from "../models/AdminWallet";
+import GeneralSetting from "../models/GeneralSetting";
+import ReferralLink from "../models/ReferralLink";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import voucher_codes from 'voucher-code-generator'
@@ -131,10 +133,21 @@ export const googleSignup = async (req: Request, res: Response) => {
     const userData = req.body;
     const email = userData.email;
     const browser = userData.browser;
+    const referral = userData.referral
     let role = "USER"
 
-    const adminDonuts = await AdminWallet.findOne({ admin: "ADMIN" });
-    const user = await User.findOne({ email: email })
+    const result = await Promise.all([
+      GeneralSetting.findOne(),
+      AdminWallet.findOne(),
+      User.findOne({ email: email })
+    ])
+
+    const generalSetting = result[0] 
+    const adminDonuts = result[1]
+    const user = result[2]
+
+    let referralLink: any = null
+    if(referral.userId) referralLink = await ReferralLink.findOne({ user: referral.userId })
     if (user) googleSignin(req, res)
     else {
       const users = await User.find()
@@ -201,6 +214,22 @@ export const googleSignup = async (req: Request, res: Response) => {
                         $name: updatedUser.name,
                         $email: updatedUser.email,
                       });
+
+                      if(referralLink) {
+                        let users = [...referralLink.invitedUsers]
+                        users[referral.index] = {
+                          date: users[referral.index].date,
+                          newUser: updatedUser._id,
+                          reward: generalSetting.referralLinkDonuts,
+                          earned: false,
+                        }
+
+                        ReferralLink.findByIdAndUpdate(referralLink._id, {
+                          expected: generalSetting.referralLinkDonuts,
+                          invitedUsers: users
+                        }).exec()
+                      }
+
                       mixpanel.track("Sign Up", {
                         'Sign Up Method': 'Gmail',
                         'Browser Used': browser,
@@ -686,5 +715,34 @@ export const getUserFromUrl = async (req: Request, res: Response) => {
     return res.status(200).json({ success: true, user: user });
   } catch (err) {
     console.log(err);
+  }
+}
+
+export const inviteFriend = async (req: Request, res: Response) => {
+  try {
+    const { referralLink } = req.body
+    const user = await User.findOne({ referralLink: referralLink })
+    const referral = await ReferralLink.findOne({ user: user._id })
+    let index = 0
+    if (referral) {
+
+      let users = [...referral.invitedUsers]
+      users.push({ date: calcTime() })
+      index = referral.invitedUsers.length
+      await ReferralLink.findByIdAndUpdate(referral._id, { invitedUsers: users })
+
+    } else {
+
+      const newReferral = new ReferralLink({
+        user: user._id,
+        invitedUsers: [{ date: calcTime() }]
+      })
+      await newReferral.save()
+
+    }
+
+    return res.status(200).json({ success: true, data: { index: index, userId: user._id } })
+  } catch (err) {
+    console.log(err)
   }
 }

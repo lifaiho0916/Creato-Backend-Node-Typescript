@@ -352,9 +352,7 @@ export const getFundMeList = async (req: Request, res: Response) => {
   try {
     const { search } = req.body;
     if (search === "") {
-      const fundmes = await FundMe.find({ 'published': true })
-        .populate({ path: 'owner', select: { 'name': 1, 'categories': 1 } })
-        .select({ 'title': 1, 'category': 1, 'date': 1, 'deadline': 1, 'finished': 1, 'owner': 1, 'show': 1, 'wallet': 1 });
+      const fundmes = await FundMe.find({ 'published': true }).populate({ path: 'owner', select: { 'name': 1, 'categories': 1 } })
       var result: Array<object> = [];
       for (const fundme of fundmes) {
         let time = 0.0;
@@ -368,7 +366,8 @@ export const getFundMeList = async (req: Request, res: Response) => {
           category: fundme.category,
           title: fundme.title,
           wallet: fundme.wallet,
-          show: fundme.show
+          show: fundme.show,
+          empty: fundme.empty
         });
       }
       return res.status(200).json({ success: true, fundmes: result });

@@ -50,6 +50,7 @@ export const getFanwallList = async (req: Request, res: Response) => {
         date: dareme.date,
         type: 'DareMe'
       })
+      index++
     }
 
     index = 0
@@ -64,6 +65,7 @@ export const getFanwallList = async (req: Request, res: Response) => {
         date: fundme.date,
         type: 'FundMe'
       })
+      index++
     }
 
     fanwalls = fanwalls.sort((first: any, second: any) => {
