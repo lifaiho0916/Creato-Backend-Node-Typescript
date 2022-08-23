@@ -316,10 +316,22 @@ export const appleSignup = async (req: Request, res: Response) => {
     const token = userData.token
     const browser = userData.browser
     const appleUser = userData.user
+    const referral = userData.referral
 
     const decodeToken: any = jwt.decode(token)
-    const adminDonuts = await AdminWallet.findOne({ admin: "ADMIN" })
-    const user = await User.findOne({ email: decodeToken.email })
+
+    const result = await Promise.all([
+      GeneralSetting.findOne(),
+      AdminWallet.findOne(),
+      User.findOne({ email: decodeToken.email })
+    ])
+
+    const generalSetting = result[0] 
+    const adminDonuts = result[1]
+    const user = result[2]
+
+    let referralLink: any = null
+    if(referral.userId) referralLink = await ReferralLink.findOne({ user: referral.userId })
     if (user) appleSignin(req, res)
     else {
       const users = await User.find()
@@ -387,6 +399,22 @@ export const appleSignup = async (req: Request, res: Response) => {
                         $name: updatedUser.name,
                         $email: updatedUser.email,
                       });
+
+                      if(referralLink) {
+                        let users = [...referralLink.invitedUsers]
+                        users[referral.index] = {
+                          date: users[referral.index].date,
+                          newUser: updatedUser._id,
+                          reward: generalSetting.referralLinkDonuts,
+                          earned: false,
+                        }
+
+                        ReferralLink.findByIdAndUpdate(referralLink._id, {
+                          expected: generalSetting.referralLinkDonuts,
+                          invitedUsers: users
+                        }).exec()
+                      }
+                      
                       mixpanel.track("Sign Up", {
                         'Sign Up Method': 'Apple',
                         'Browser Used': browser,
