@@ -80,7 +80,6 @@ export const getFanwallList = async (req: Request, res: Response) => {
   }
 }
 
-
 /////////////////////////////////////////////////////////////////
 
 export const saveFanwall = async (req: Request, res: Response) => {
@@ -134,7 +133,7 @@ export const saveFanwall = async (req: Request, res: Response) => {
       }
 
       if (posted) {
-        const dareme = await DareMe.findById(itemId).populate({ path: 'writer' });
+        const dareme = await DareMe.findById(itemId);
         if (dareme && dareme.wallet > 0) {
           const result = await Promise.all([
             User.findById(dareme.owner),

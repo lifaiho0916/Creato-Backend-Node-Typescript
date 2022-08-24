@@ -571,8 +571,17 @@ export const checkDareMeFinished = async (req: Request, res: Response) => {
 
 export const deleteDareme = async (req: Request, res: Response) => {
   try {
-    const { daremeId } = req.params;
-    const dareme = await DareMe.findById(daremeId);
+    const { daremeId } = req.params
+    const result = await Promise.all([
+      DareMe.findById(daremeId),
+      Fanwall.findOne({ dareme: daremeId })
+    ])
+    const dareme = result[0]
+    const fanwall = result[1]
+    const options = dareme.options
+    const delFuncs: Array<any> = []
+    if (fanwall) delFuncs.push(Fanwall.findByIdAndDelete(fanwall._id))
+    for (const option of options) delFuncs.push(Option.findByIdAndDelete(option.option))
     if (dareme.teaser) {
       const filePath = "public/" + dareme.teaser;
       fs.unlink(filePath, (err) => {
@@ -585,7 +594,9 @@ export const deleteDareme = async (req: Request, res: Response) => {
         if (err) throw err;
       });
     }
-    await DareMe.findByIdAndDelete(daremeId);
+
+    delFuncs.push(DareMe.findByIdAndDelete(daremeId))
+    await Promise.all(delFuncs)
     return res.status(200).json({ success: true });
   } catch (err) {
     console.log(err);
@@ -1383,33 +1394,6 @@ export const setDareMeShow = async (req: Request, res: Response) => {
     const { show } = req.body;
     const updatedDareme = await DareMe.findByIdAndUpdate(daremeId, { show: show }, { new: true });
     if (updatedDareme) return res.status(200).json({ success: true });
-  } catch (err) {
-    console.log(err);
-  }
-}
-
-export const deleteDareMe = async (req: Request, res: Response) => {
-  try {
-    const { daremeId } = req.params;
-    const dareme = await DareMe.findById(daremeId);
-    const options = dareme.options;
-    for (const option of options) {
-      await Option.findByIdAndDelete(option.option);
-    }
-    if (dareme.teaser) {
-      const filePath = "public/" + dareme.teaser;
-      fs.unlink(filePath, (err) => {
-        if (err) throw err;
-      });
-    }
-    if (dareme.cover) {
-      const filePath = "public/" + dareme.cover;
-      fs.unlink(filePath, (err) => {
-        if (err) throw err;
-      });
-    }
-    await DareMe.findByIdAndDelete(daremeId);
-    return res.status(200).json({ success: true });
   } catch (err) {
     console.log(err);
   }

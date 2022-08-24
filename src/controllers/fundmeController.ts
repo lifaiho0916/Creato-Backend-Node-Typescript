@@ -392,7 +392,12 @@ export const setFundMeShow = async (req: Request, res: Response) => {
 export const deleteFundMe = async (req: Request, res: Response) => {
   try {
     const { fundmeId } = req.params;
-    const fundme = await FundMe.findById(fundmeId);
+    const result = await Promise.all([
+      FundMe.findById(fundmeId),
+      Fanwall.findOne({ fundme: fundmeId })
+    ])
+    const fundme = result[0]
+    const fanwall = result[1]
     if (fundme.teaser) {
       const filePath = "public/" + fundme.teaser;
       fs.unlink(filePath, (err) => {
@@ -405,7 +410,10 @@ export const deleteFundMe = async (req: Request, res: Response) => {
         if (err) throw err;
       });
     }
-    await FundMe.findByIdAndDelete(fundmeId);
+    let delFuncs: Array<any> = []
+    if (fanwall) delFuncs.push(Fanwall.findByIdAndDelete(fanwall._id))
+    delFuncs.push(FundMe.findByIdAndDelete(fundmeId))
+    await Promise.all(delFuncs)
     return res.status(200).json({ success: true });
   } catch (err) {
     console.log(err);

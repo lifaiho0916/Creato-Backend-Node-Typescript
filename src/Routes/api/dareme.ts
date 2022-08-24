@@ -26,7 +26,6 @@ import {
     selectCover,
     getDareMeList,
     setDareMeShow,
-    deleteDareMe,
     updateDareMe,
     deleteOption,
     getDaremeOptions,
@@ -63,7 +62,7 @@ router.get('/:daremeId/support_refund', auth, supportRefund)
 //admin
 router.post('/daremes', auth, getDareMeList);
 router.post('/daremes/:daremeId', auth, setDareMeShow);
-router.delete('/daremes/:daremeId', auth, deleteDareMe);
+router.delete('/daremes/:daremeId', auth, deleteDareme);
 router.put('/daremes/:daremeId', auth, updateDareMe);
 router.delete('/daremes/:daremeId/options/:optionId', auth, deleteOption);
 
