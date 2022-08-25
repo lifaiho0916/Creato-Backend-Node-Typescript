@@ -37,9 +37,9 @@ export const dareCreator = async (req: Request, res: Response) => {
     DareMe.findById(daremeId).populate({ path: 'owner' })
   ])
 
-  const option = results[0]
-  const user = results[1] // sender who is called this api
-  const dareme = results[2]
+  const option: any = results[0]
+  const user: any = results[1] // sender who is called this api
+  const dareme: any = results[2]
 
   let daremeWallet = dareme.wallet + amount
   let options = dareme.options
@@ -97,9 +97,9 @@ export const declineDareOption = async (req: Request, res: Response) => {
       DareMe.findById(daremeId)
     ])
 
-    const option = results[0]
-    const dareme = results[1]
-    const user = await User.findById(option.writer._id)
+    const option: any = results[0]
+    const dareme: any = results[1]
+    const user: any = await User.findById(option.writer._id)
 
     req.body.io.to(user.email).emit("wallet_change", user.wallet + option.donuts)
     const transaction = new AdminUserTransaction({
@@ -126,7 +126,7 @@ export const declineDareOption = async (req: Request, res: Response) => {
 export const getDaremeDetails = async (req: Request, res: Response) => {
   try {
     const { daremeId } = req.params
-    const dareme = await DareMe.findById(daremeId)
+    const dareme: any = await DareMe.findById(daremeId)
       .populate({ path: 'owner', select: { 'avatar': 1, 'personalisedUrl': 1, 'name': 1, '_id': 1 } })
       .populate({
         path: 'options.option',
@@ -167,7 +167,7 @@ export const getDaremeDetails = async (req: Request, res: Response) => {
 export const getDaremeOptions = async (req: Request, res: Response) => {
   try {
     const { daremeId } = req.params
-    const dareme = await DareMe.findById(daremeId)
+    const dareme: any = await DareMe.findById(daremeId)
       .populate({
         path: 'options.option',
         model: Option,
@@ -208,7 +208,7 @@ export const checkRefundPossible = async (req: Request, res: Response) => {
   try {
     const { daremeId } = req.params
     const { userId } = req.body
-    const dareme = await DareMe.findById(daremeId).populate({ path: 'options.option' })
+    const dareme: any = await DareMe.findById(daremeId).populate({ path: 'options.option' })
     if (dareme.fanwall) return res.status(200).json({ success: true, refund: false })
 
     let refund = true
@@ -234,8 +234,8 @@ export const refundDonuts = async (req: Request, res: Response) => {
       DareMe.findById(daremeId).populate({ path: 'options.option' })
     ])
 
-    const user = results[0]
-    const dareme = results[1]
+    const user: any = results[0]
+    const dareme: any = results[1]
     const userWallet = user.wallet + donuts
     const options = dareme.options
 
@@ -273,7 +273,7 @@ export const refundDonuts = async (req: Request, res: Response) => {
     ])
 
     io.to(user.email).emit('wallet_change', userWallet)
-    const updatedUser = results1[2]
+    const updatedUser: any = results1[2]
 
     const payload = {
       id: updatedUser._id,
@@ -299,7 +299,7 @@ export const supportRefund = async (req: Request, res: Response) => {
     const { daremeId } = req.params
     const { userId } = req.body
 
-    const dareme = await DareMe.findById(daremeId).populate({ path: 'options.option' })
+    const dareme: any = await DareMe.findById(daremeId).populate({ path: 'options.option' })
     const options = dareme.options
 
     let optionFuncs: Array<any> = []
@@ -329,12 +329,12 @@ export const supportRefund = async (req: Request, res: Response) => {
 
 export const checkOngoingdaremes = async (io: any) => {
   try {
-    const daremes = await DareMe.find({ published: true }).where('finished').equals(false).populate({ path: 'options.option' })
+    const daremes: any = await DareMe.find({ published: true }).where('finished').equals(false).populate({ path: 'options.option' })
 
     for (const dareme of daremes) {
       if ((new Date(dareme.date).getTime() + 1000 * 3600 * 24 * dareme.deadline) < new Date(calcTime()).getTime()) { //// dareme is finished?
 
-        const daremeInfo = await DareMe.findByIdAndUpdate(dareme._id, { finished: true }, { new: true }).populate({ path: 'options.option' }) //// Finish DareMe
+        const daremeInfo: any = await DareMe.findByIdAndUpdate(dareme._id, { finished: true }, { new: true }).populate({ path: 'options.option' }) //// Finish DareMe
         await User.findByIdAndUpdate(dareme.owner, { tipFunction: true })
         const options = daremeInfo.options.filter((option: any) => option.option.status === 1) // accpeted options
         const maxOption: any = options.reduce((prev: any, current: any) => (prev.option.donuts > current.option.donuts) ? prev : current) /// top donuts options
@@ -383,7 +383,7 @@ export const checkOngoingdaremes = async (io: any) => {
       if (calc >= -60000 && calc <= 0) { /// refund donuts of rejected dare
         const options = dareme.options.filter((option: any) => option.option.status === 0)
         for (const option of options) {
-          const user = await User.findById(option.option.writer)
+          const user: any = await User.findById(option.option.writer)
           io.to(user.email).emit("wallet_change", user.wallet + option.option.donuts)
           const transaction = new AdminUserTransaction({
             description: 7,
@@ -413,7 +413,7 @@ export const checkOngoingdaremes = async (io: any) => {
 export const publishDareme = async (req: Request, res: Response) => {
   try {
     const { userId } = req.body;
-    const dareme = await DareMe.findOne({ owner: userId, published: false })
+    const dareme: any = await DareMe.findOne({ owner: userId, published: false })
     const updatedDareme = await DareMe.findByIdAndUpdate(dareme._id, { published: true, date: calcTime() }, { new: true });
 
     addNewNotification(req.body.io, {
@@ -442,7 +442,7 @@ export const saveDareme = async (req: Request, res: Response) => {
   try {
     const { dareme, userId } = req.body;
     dareme.owner = userId;
-    const resDareme = await DareMe.findOne({ owner: userId, published: false });
+    const resDareme: any = await DareMe.findOne({ owner: userId, published: false });
     if (resDareme) {
       if (resDareme.teaser && resDareme.teaser !== dareme.teaser) {
         const filePath = "public/" + resDareme.teaser;
@@ -480,7 +480,7 @@ export const saveDareme = async (req: Request, res: Response) => {
         }
         dareme.options = newOptions;
       }
-      const updatedDareme = await DareMe.findByIdAndUpdate(resDareme._id, {
+      const updatedDareme: any = await DareMe.findByIdAndUpdate(resDareme._id, {
         title: dareme.title,
         teaser: dareme.teaser,
         cover: dareme.cover,
@@ -562,7 +562,7 @@ export const uploadFile = (req: Request, res: Response) => {
 export const checkDareMeFinished = async (req: Request, res: Response) => {
   try {
     const { daremeId } = req.params;
-    const dareme = await DareMe.findById(daremeId);
+    const dareme: any = await DareMe.findById(daremeId);
     return res.status(200).json({ finished: dareme.finished });
   } catch (err) {
     console.log(err);
@@ -576,8 +576,8 @@ export const deleteDareme = async (req: Request, res: Response) => {
       DareMe.findById(daremeId),
       Fanwall.findOne({ dareme: daremeId })
     ])
-    const dareme = result[0]
-    const fanwall = result[1]
+    const dareme: any = result[0]
+    const fanwall: any = result[1]
     const options = dareme.options
     const delFuncs: Array<any> = []
     if (fanwall) delFuncs.push(Fanwall.findByIdAndDelete(fanwall._id))
@@ -607,8 +607,8 @@ export const getDaremesByPersonalUrl = async (req: Request, res: Response) => {
   try {
     const { url } = req.body;
     let results: Array<object> = [];
-    const user = await User.findOne({ personalisedUrl: url }).select({ 'name': 1, 'avatar': 1, 'personalisedUrl': 1, 'categories': 1, 'subscribed_users': 1, 'tipFunction': 1 });
-    const userDaremes = await DareMe.find({ owner: user._id, published: true, show: true })
+    const user: any = await User.findOne({ personalisedUrl: url }).select({ 'name': 1, 'avatar': 1, 'personalisedUrl': 1, 'categories': 1, 'subscribed_users': 1, 'tipFunction': 1 });
+    const userDaremes: any = await DareMe.find({ owner: user._id, published: true, show: true })
       .populate({ path: 'owner', select: { 'name': 1, 'avatar': 1, 'personalisedUrl': 1, 'status': 1 } })
       .populate({ path: 'options.option', select: { 'donuts': 1, '_id': 0, 'status': 1, 'voters': 1, 'voteInfo': 1 } })
       .select({ 'published': 0, 'wallet': 0, '__v': 0 });
@@ -846,19 +846,22 @@ export const getDaremesByPersonalUrl = async (req: Request, res: Response) => {
 
 export const getDaremesOngoing = async (req: Request, res: Response) => {
   try {
-    const daremeFunc = DareMe.find({ published: true, show: true })
+    const daremeFunc: any = DareMe.find({ published: true, show: true })
       .populate({ path: 'owner', select: { 'avatar': 1, 'personalisedUrl': 1, 'name': 1 } })
       .populate({ path: 'options.option', select: { 'donuts': 1, '_id': 0, 'status': 1 } })
       .select({ 'published': 0, 'wallet': 0, '__v': 0 });
-    const fundmeFunc = FundMe.find({ published: true, show: true })
+    const fundmeFunc: any = FundMe.find({ published: true, show: true })
       .populate({ path: 'owner', select: { 'avatar': 1, 'personalisedUrl': 1, 'name': 1 } })
       .select({ 'published': 0, '__v': 0 });
-    const fanwallFunc = Fanwall.find({ posted: true })
-      .populate({ path: 'writer', select: { 'avatar': 1, 'personalisedUrl': 1, 'name': 1 } })
+    const fanwallFunc: any = Fanwall.find({ posted: true })
       .populate([
         {
+          path: 'writer',
+          select: { 'avatar': 1, 'personalisedUrl': 1, 'name': 1 }
+        },
+        {
           path: 'dareme',
-          Model: DareMe,
+          model: DareMe,
           select: {
             'title': 1, 'deadline': 1, 'category': 1, 'reward': 1
           },
@@ -869,7 +872,7 @@ export const getDaremesOngoing = async (req: Request, res: Response) => {
         },
         {
           path: 'fundme',
-          Model: FundMe,
+          model: FundMe,
           select: {
             'title': 1, 'deadline': 1, 'category': 1, 'goal': 1, 'wallet': 1, 'voteInfo': 1, 'reward': 1
           }
@@ -879,10 +882,10 @@ export const getDaremesOngoing = async (req: Request, res: Response) => {
     const finishedDareme = DareMe.find({ finished: true }).populate({ path: 'owner' })
     const finishedFundme = FundMe.find({ finished: true }).populate({ path: 'owner' })
 
-    const result = await Promise.all([daremeFunc, fundmeFunc, fanwallFunc, finishedDareme, finishedFundme]);
-    const daremes = result[0];
-    const fundmes = result[1];
-    const fanwalls = result[2];
+    const result: any = await Promise.all([daremeFunc, fundmeFunc, fanwallFunc, finishedDareme, finishedFundme]);
+    const daremes: any = result[0];
+    const fundmes: any = result[1];
+    const fanwalls: any = result[2];
 
     const users = <Array<any>>[];
     for (const dareme of result[3]) {
@@ -1026,7 +1029,7 @@ export const getDaremesOngoing = async (req: Request, res: Response) => {
 export const getDaremeResult = async (req: Request, res: Response) => {
   try {
     const { daremeId } = req.params;
-    const dareme = await DareMe.findById(daremeId)
+    const dareme: any = await DareMe.findById(daremeId)
       .populate({ path: 'owner', select: { 'avatar': 1, 'personalisedUrl': 1, 'name': 1, '_id': 1 } })
       .populate({
         path: 'options.option',
@@ -1072,7 +1075,7 @@ export const getOptionsFromUserId = async (req: Request, res: Response) => {
 export const getOptionDetails = async (req: Request, res: Response) => {
   try {
     const { optionId, daremeId } = req.params;
-    const dareme = await DareMe.findById(daremeId)
+    const dareme: any = await DareMe.findById(daremeId)
       .populate({ path: 'owner', select: { 'avatar': 1, 'personalisedUrl': 1, 'name': 1 } })
       .populate({ path: 'options.option' })
       .select({ 'teaser': 1, 'options': 1, 'title': 1, 'cover': 1, 'sizeType': 1, 'reward': 1, 'rewardText': 1 });
@@ -1104,9 +1107,9 @@ export const supportCreator = async (req: Request, res: Response) => {
       User.findById(userId)
     ]);
 
-    const option = result[0];
-    const dareme = result[1];
-    const user = result[2];
+    const option: any = result[0];
+    const dareme: any = result[1];
+    const user: any = result[2];
 
     let voteInfo = option.voteInfo;
     let totalDonuts = option.donuts + amount;
@@ -1150,7 +1153,7 @@ export const supportCreator = async (req: Request, res: Response) => {
     ]);
 
     const optionNew = result1[0];
-    const updatedDareme = result1[1];
+    const updatedDareme: any = result1[1];
 
     const resDareme = {
       _id: updatedDareme._id,
@@ -1168,7 +1171,7 @@ export const supportCreator = async (req: Request, res: Response) => {
     if (amount < superfan) {
       let resUser = null
       if (amount === 1) {
-        const adminWallet = await AdminWallet.findOne({ admin: "ADMIN" })
+        const adminWallet: any = await AdminWallet.findOne({ admin: "ADMIN" })
         const adminDonuts = adminWallet.wallet - 1
         req.body.io.to("ADMIN").emit("wallet_change", adminDonuts);
 
@@ -1188,7 +1191,7 @@ export const supportCreator = async (req: Request, res: Response) => {
         ])
       } else {
         let wallet = user.wallet - amount;
-        const updatedUser = await User.findByIdAndUpdate(userId, { wallet: wallet }, { new: true });
+        const updatedUser: any = await User.findByIdAndUpdate(userId, { wallet: wallet }, { new: true });
         const payload = {
           id: updatedUser._id,
           name: updatedUser.name,
@@ -1228,7 +1231,7 @@ export const supportCreator = async (req: Request, res: Response) => {
       return res.status(200).json({ success: true, dareme: resDareme, option: optionNew, user: resUser });
     } else {
       let wallet = user.wallet - amount;
-      const updatedUser = await User.findByIdAndUpdate(userId, { wallet: wallet }, { new: true });
+      const updatedUser: any = await User.findByIdAndUpdate(userId, { wallet: wallet }, { new: true });
       const payload = {
         id: updatedUser._id,
         name: updatedUser.name,
@@ -1282,14 +1285,14 @@ export const getDareCreatorDetails = async (req: Request, res: Response) => {
 
 export const checkDareMeRequests = async (req: Request, res: Response) => {
   const { daremeId } = req.params;
-  const dareme = await DareMe.findById(daremeId);
+  const dareme: any = await DareMe.findById(daremeId);
   const options = dareme.options.filter((option: any) => option.option.status !== 1);
   return res.status(200).json({ request: options.length > 0 ? true : false });
 }
 
 export const getDareMeRequests = async (req: Request, res: Response) => {
   const { daremeId } = req.params;
-  const dareme = await DareMe.findById(daremeId)
+  const dareme: any = await DareMe.findById(daremeId)
     .populate({ path: 'owner', select: { 'avatar': 1, 'personalisedUrl': 1, 'name': 1 } })
     .populate({
       path: 'options.option',
@@ -1326,14 +1329,14 @@ export const winDareOption = async (req: Request, res: Response) => {
   try {
     const { optionId, daremeId } = req.body;
     await Option.findByIdAndUpdate(optionId, { win: true });
-    const dareme = await DareMe.findById(daremeId).populate({ path: 'options.option', model: Option });
+    const dareme: any = await DareMe.findById(daremeId).populate({ path: 'options.option', model: Option });
     const options = dareme.options;
     const filters = options.filter((option: any) => option.option.win === false);
     let minusDonuts = 0;
     for (const option of filters) {
       for (const vote of option.option.voteInfo) {
         if ((option.option.writer + "") !== (vote.voter + "")) {
-          const voter = await User.findById(vote.voter);
+          const voter: any = await User.findById(vote.voter);
           let wallet = voter.wallet + vote.donuts;
           await User.findByIdAndUpdate(vote.voter, { wallet: wallet });
           req.body.io.to(voter.email).emit("wallet_change", wallet);
@@ -1362,7 +1365,7 @@ export const getDareMeList = async (req: Request, res: Response) => {
   try {
     const { search } = req.body;
     if (search === "") {
-      const daremes = await DareMe.find({ 'published': true })
+      const daremes: any = await DareMe.find({ 'published': true })
         .populate({ path: 'owner', select: { 'name': 1, 'categories': 1 } })
         .select({ 'title': 1, 'category': 1, 'date': 1, 'deadline': 1, 'finished': 1, 'owner': 1, 'show': 1, 'wallet': 1 });
       var result: Array<object> = [];
@@ -1403,7 +1406,7 @@ export const updateDareMe = async (req: Request, res: Response) => {
   try {
     const { daremeId } = req.params;
     const { dareme } = req.body;
-    const resDareme = await DareMe.findById(daremeId);
+    const resDareme: any = await DareMe.findById(daremeId);
     if (dareme.teaserFile) {
       const filePath = "public/" + resDareme.teaser;
       fs.unlink(filePath, (err) => {
@@ -1442,7 +1445,7 @@ export const deleteOption = async (req: Request, res: Response) => {
   try {
     const { daremeId, optionId } = req.params;
     await Option.findByIdAndDelete(optionId);
-    const dareme = await DareMe.findById(daremeId);
+    const dareme: any = await DareMe.findById(daremeId);
     const options = dareme.options.filter((option: any) => (option.option + "") !== (optionId + ""));
     await DareMe.findByIdAndUpdate(daremeId, { options: options });
     const resDareme = await DareMe.findById(daremeId)

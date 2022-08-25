@@ -24,7 +24,7 @@ export const tipUser = async (req: Request, res: Response) => {
         const { type, tipper, user, tip, message } = req.body;
 
         if (type === 1) {
-            const walletState = await Promise.all([
+            const walletState: any = await Promise.all([
                 User.findById(tipper),
                 User.findById(user),
                 AdminWallet.findOne({ admin: "ADMIN" })
@@ -63,7 +63,7 @@ export const tipUser = async (req: Request, res: Response) => {
                 date: currentTime
             });
 
-            const updateState = await Promise.all([
+            const updateState: any = await Promise.all([
                 User.findByIdAndUpdate(tipper, { wallet: tipperWallet }, { new: true }),
                 User.findByIdAndUpdate(user, { wallet: receiverWallet }, { new: true }),
                 AdminWallet.findOneAndUpdate({ admin: "ADMIN" }, { wallet: adminWallet }, { new: true }),
@@ -104,7 +104,7 @@ export const tipUser = async (req: Request, res: Response) => {
 
             return res.status(200).json({ success: true, user: payload });
         } else {
-            const walletState = await Promise.all([
+            const walletState: any = await Promise.all([
                 User.findById(user),
                 AdminWallet.findOne({ admin: "ADMIN" })
             ]);
@@ -141,7 +141,7 @@ export const tipUser = async (req: Request, res: Response) => {
                 date: currentTime
             });
 
-            const updateState = await Promise.all([
+            const updateState: any = await Promise.all([
                 User.findByIdAndUpdate(user, { wallet: receiverWallet }, { new: true }),
                 AdminWallet.findOneAndUpdate({ admin: "ADMIN" }, { wallet: adminWallet }, { new: true }),
                 newTip.save(),
@@ -184,7 +184,7 @@ export const buyDonutForTip = async (req: Request, res: Response) => {
         })
 
         if (charge.status === 'succeeded') {
-            const adminWallet = await AdminWallet.findOne({ admin: "ADMIN" });
+            const adminWallet: any = await AdminWallet.findOne({ admin: "ADMIN" });
             const adminDonuts = adminWallet.wallet - item.donutCount;
             await AdminWallet.findOneAndUpdate({ admin: "ADMIN" }, { wallet: adminDonuts });
             req.body.io.to("ADMIN").emit("wallet_change", adminDonuts);
@@ -234,7 +234,7 @@ export const getTipsData = async (req: Request, res: Response) => {
 export const getTipProfile = async (req: Request, res: Response) => {
     try {
         const { url } = req.params;
-        const user = await User.findOne({ personalisedUrl: url });
+        const user: any = await User.findOne({ personalisedUrl: url });
         const tips = await Tip.find({ user: user._id }).populate({ path: 'tipper' });
         const result = tips.sort((first: any, second: any) => {
             if (first.tip < second.tip) return 1;
@@ -266,7 +266,7 @@ export const setTipFunction = async (req: Request, res: Response) => {
 export const changeVisible = async (req: Request, res: Response) => {
     try {
         const { show, tipId } = req.body;
-        const tip = await Tip.findByIdAndUpdate(tipId, { show: show });
+        const tip: any = await Tip.findByIdAndUpdate(tipId, { show: show });
         const tips = await Tip.find({ user: tip.user }).populate({ path: 'tipper' });
         const result = tips.sort((first: any, second: any) => {
             if (first.tip < second.tip) return 1;

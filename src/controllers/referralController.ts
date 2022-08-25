@@ -19,7 +19,7 @@ export const getReferralLinks = async (req: Request, res: Response) => {
       GeneralSetting.findOne()
     ])
     const referrals = result[0]
-    const settings = result[1]
+    const settings: any = result[1]
 
     return res.status(200).json({ success: true, referrals: referrals, reward: settings.referralLinkDonuts })
   } catch (err) {
@@ -40,7 +40,7 @@ export const changeRewardDonuts = async (req: Request, res: Response) => {
 export const transferDonuts = async (req: Request, res: Response) => {
   try {
     const { donuts, Id } = req.body
-    const result = await Promise.all([
+    const result: any = await Promise.all([
       AdminWallet.findOne(),
       ReferralLink.findOne({ user: Id }).populate({ path: 'user' }),
     ])

@@ -28,9 +28,9 @@ export const getTransactions = async (req: Request, res: Response) => {
                 AdminUserTransaction.find({ $or: [{ from: 'USER' }, { to: 'USER' }, { description: 3 }] })
                     .populate([{ path: 'user' }, { path: 'user1' }, { path: 'dareme' }, { path: 'fundme' }])
         ]);
-        const adminWallet = result[0];
+        const adminWallet: any = result[0];
         const adminDonuts = adminWallet.wallet; //admin' s donuts
-        const users = result[1];
+        const users: any = result[1];
         let userDonuts = 0.0;
 
         users.forEach((user: any) => {
@@ -68,7 +68,7 @@ export const getTransactions = async (req: Request, res: Response) => {
 export const addAdminDonuts = async (req: Request, res: Response) => {
     try {
         const { donuts } = req.body;
-        const adminWallets = await AdminWallet.findOne({ admin: 'ADMIN' });
+        const adminWallets: any = await AdminWallet.findOne({ admin: 'ADMIN' });
         let wallet = Number(adminWallets.wallet) + Number(donuts);
         await AdminWallet.findOneAndUpdate({ admin: "ADMIN" }, { wallet: wallet });
         const adminTransaction = new AdminUserTransaction({
@@ -87,9 +87,14 @@ export const addAdminDonuts = async (req: Request, res: Response) => {
 export const transferDonuts = async (req: Request, res: Response) => {
     try {
         const { from, to, amount } = req.body;
-        const adminWallets = await AdminWallet.findOne({ admin: 'ADMIN' });
-        const fromUser = await User.findById(from);
-        const toUser = await User.findById(to);
+        const result = await Promise.all([
+            AdminWallet.findOne({ admin: 'ADMIN' }),
+            User.findById(from),
+            User.findById(to)
+        ])
+        const adminWallets: any = result[0]
+        const fromUser: any = result[1]
+        const toUser: any = result[2]
         if (fromUser.role === "ADMIN" && toUser.role === "ADMIN") return res.status(200).json({ success: false });
         let wallet = 0;
         if (fromUser.role === "ADMIN") {
@@ -133,9 +138,9 @@ export const getUserTransactionsByDays = async (req: Request, res: Response) => 
     try {
         const { userId, days } = req.body;
         if (days === 30 || days === 60) {
-            const toDate = new Date(calcTime());
-            const fromDate = new Date((new Date(calcTime())).getTime() - days * 24 * 3600 * 1000);
-            const transactions = await AdminUserTransaction.find({ user: userId })
+            const toDate: any = new Date(calcTime());
+            const fromDate: any = new Date((new Date(calcTime())).getTime() - days * 24 * 3600 * 1000);
+            const transactions: any = await AdminUserTransaction.find({ user: userId })
                 .where('date').gte(fromDate).lte(toDate)
                 .populate({ path: 'user' }).populate({ path: 'dareme' });
             return res.status(200).json({ success: true, transactions: transactions });

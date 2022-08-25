@@ -52,7 +52,7 @@ export const connectStripe = async (req: Request, res: Response) => {
 export const disconnectStripe = async (req: Request, res: Response) => {
   try {
     const { userId, clientId } = req.body
-    const account = await Payment.findOne({ owner: userId })
+    const account: any = await Payment.findOne({ owner: userId })
 
     const response: any = await stripe.oauth.deauthorize({
       client_id: clientId,
@@ -85,7 +85,7 @@ export const buyDonuts = async (req: Request, res: Response) => {
   try {
     const { token, item, userId, stripeId, check } = req.body;
     let charge = { status: 'requested' };
-    const user = await User.findById(userId);
+    const user: any = await User.findById(userId);
     let amount = item.donutCount / 10 * (100 - item.discountedPercent) / 100 * 100;
     amount += amount * 0.034 + 30;
 
@@ -136,8 +136,8 @@ export const buyDonuts = async (req: Request, res: Response) => {
         User.findByIdAndUpdate(user.id, { wallet: wallet }, { new: true }),
         AdminWallet.findOne({ admin: "ADMIN" }),
       ]);
-      const updatedUser = result[0];
-      const adminWallet = result[1];
+      const updatedUser: any = result[0];
+      const adminWallet: any = result[1];
       const adminDonuts = adminWallet.wallet - item.donutCount;
 
       const transaction = new AdminUserTransaction({
@@ -179,7 +179,7 @@ export const buyDonuts = async (req: Request, res: Response) => {
 export const getStripeID = async (req: Request, res: Response) => {
   try {
     const { userId } = req.body;
-    const user = await User.findById(userId);
+    const user: any = await User.findById(userId);
     let cardNum = null;
     if (user.stripeID) {
       const customer: any = await stripe.customers.retrieve(user.stripeID);

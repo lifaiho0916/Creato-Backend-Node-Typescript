@@ -13,7 +13,7 @@ function calcTime() {
 
 export const getNotificationHistory = async (req: Request, res: Response) => {
   try {
-    const notifications = await Notification.find()
+    const notifications: any = await Notification.find()
       .populate([
         { path: 'dareme', select: { title: 1 }, populate: { path: 'owner' } },
         { path: 'fundme', select: { title: 1 }, populate: { path: 'owner' } },
@@ -63,9 +63,9 @@ export const getNotificationHistory = async (req: Request, res: Response) => {
 export const getNotifications = async (req: Request, res: Response) => {
   try {
     const { userId } = req.body;
-    const user = await User.findById(userId)
+    const user: any = await User.findById(userId)
 
-    const notifications = await Notification.find({ receiverInfo: { $elemMatch: { receiver: userId } } })
+    const notifications: any = await Notification.find({ receiverInfo: { $elemMatch: { receiver: userId } } })
       .populate([
         { path: 'dareme', select: { title: 1 }, populate: { path: 'owner' } },
         { path: 'fundme', select: { title: 1 }, populate: { path: 'owner' } },
@@ -128,7 +128,7 @@ export const readNotification = async (req: Request, res: Response) => {
   try {
     const { notificationId, userId, readCount } = req.body;
 
-    const notification = await Notification.findById(notificationId);
+    const notification: any = await Notification.findById(notificationId);
     const receiverInfo = notification.receiverInfo;
     let result: Array<any> = [];
     receiverInfo.forEach((info: any) => {
@@ -153,7 +153,7 @@ export const readNotification = async (req: Request, res: Response) => {
 export const setNotification = async (req: Request, res: Response) => {
   try {
     const { userId } = req.body;
-    const updatedUser = await User.findByIdAndUpdate(userId, { new_notification: true }, { new: true });
+    const updatedUser: any = await User.findByIdAndUpdate(userId, { new_notification: true }, { new: true });
     const payload = {
       id: updatedUser._id,
       name: updatedUser.name,
@@ -177,7 +177,7 @@ export const subscribeUser = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { userId } = req.body;
-    const user = await User.findOne({ _id: id });
+    const user: any = await User.findOne({ _id: id });
     const found = user.subscribed_users.find(
       (user: any) => user + "" === userId + ""
     );
@@ -198,7 +198,7 @@ export const subscribeUser = async (req: Request, res: Response) => {
 
 export const addNewNotification = async (io: any, data: any) => {
   try {
-    const type = await NotificationType.findOne({ section: data.section });
+    const type: any = await NotificationType.findOne({ section: data.section });
     if (type === null) {
       console.log('Get Notification Type Error');
       return;
@@ -215,7 +215,7 @@ export const addNewNotification = async (io: any, data: any) => {
         User.findById(data.dareme.owner),
         User.findOne({ role: 'ADMIN' })
       ]);
-      const user = result[0];
+      const user: any = result[0];
 
       for (const info of type.info) {
         if (info.auto && info.trigger === data.trigger) {
@@ -226,7 +226,7 @@ export const addNewNotification = async (io: any, data: any) => {
               dareme: updatedDareme,
             */
             if (info.sender === 'Admin' && info.recipient === 'Owner') {
-              const admin = result[1];
+              const admin : any= result[1];
 
               const newNotify = new Notification({
                 section: type._id,
@@ -281,7 +281,7 @@ export const addNewNotification = async (io: any, data: any) => {
         User.findById(data.fundme.owner),
         User.findOne({ role: 'ADMIN' })
       ]);
-      const user = result[0];
+      const user: any = result[0];
 
       for (const info of type.info) {
         if (info.auto && info.trigger === data.trigger) {
@@ -292,7 +292,7 @@ export const addNewNotification = async (io: any, data: any) => {
               dareme: updatedFundme,
             */
             if (info.sender === 'Admin' && info.recipient === 'Owner') {
-              const admin = result[1];
+              const admin: any = result[1];
 
               const newNotify = new Notification({
                 section: type._id,
@@ -348,7 +348,7 @@ export const addNewNotification = async (io: any, data: any) => {
         User.findById(data.dareme.owner._id),
         User.findOne({ role: 'ADMIN' })
       ]);
-      const user = result[0];
+      const user: any = result[0];
 
       for (const info of type.info) {
         if (info.auto && info.trigger === data.trigger) {
@@ -419,7 +419,7 @@ export const addNewNotification = async (io: any, data: any) => {
         User.findById(data.fundme.owner._id),
         User.findOne({ role: 'ADMIN' })
       ]);
-      const user = result[0];
+      const user: any = result[0];
 
       for (const info of type.info) {
         if (info.auto && info.trigger === data.trigger) {
@@ -498,7 +498,7 @@ export const addNewNotification = async (io: any, data: any) => {
               dareme: updatedDareme,
             */
             if (info.sender === 'Admin' && info.recipient === 'Voter of Non Winning Dares') {
-              const admin = result[1]
+              const admin: any = result[1]
               let users: Array<any> = []
 
               data.voters.forEach((voter: any) => {
@@ -540,7 +540,7 @@ export const addNewNotification = async (io: any, data: any) => {
               tip: tip,
             */
             if (info.sender === 'Admin' && info.recipient === 'User') {
-              const admin = await User.findOne({ role: 'ADMIN' })
+              const admin: any = await User.findOne({ role: 'ADMIN' })
               let users: Array<any> = []
 
               const newNotify = new Notification({
@@ -561,7 +561,7 @@ export const addNewNotification = async (io: any, data: any) => {
             }
           } else if (info.trigger === 'After received Donuts from tipping') {
             if (info.sender === 'Admin' && info.recipient === 'Creator') {
-              const admin = await User.findOne({ role: 'ADMIN' })
+              const admin: any = await User.findOne({ role: 'ADMIN' })
               let users: Array<any> = []
 
               const newNotify = new Notification({
@@ -607,7 +607,7 @@ export const addNotificationSetting = async (req: Request, res: Response) => {
     const { value, type } = req.body;
     const setting = await NotificationSetting.findOne();
     if (type === 0) {
-      let sections = [];
+      let sections: any = [];
       if (setting && setting.section && setting.section.length > 0) sections = setting.section;
       sections.push({ title: value });
       if (setting === null) {
@@ -616,7 +616,7 @@ export const addNotificationSetting = async (req: Request, res: Response) => {
       } else await NotificationSetting.findOneAndUpdate({}, { section: sections });
       return res.status(200).json({ success: true });
     } else if (type === 1) {
-      let senders = [];
+      let senders: any = [];
       if (setting && setting.sender && setting.sender.length > 0) senders = setting.sender;
       senders.push({ title: value });
       if (setting === null) {
@@ -625,7 +625,7 @@ export const addNotificationSetting = async (req: Request, res: Response) => {
       } else await NotificationSetting.findOneAndUpdate({}, { sender: senders });
       return res.status(200).json({ success: true });
     } else if (type === 2) {
-      let recipients = [];
+      let recipients: any = [];
       if (setting && setting.recipient && setting.recipient.length > 0) recipients = setting.recipient;
       recipients.push({ title: value });
       if (setting === null) {
@@ -634,7 +634,7 @@ export const addNotificationSetting = async (req: Request, res: Response) => {
       } else await NotificationSetting.findOneAndUpdate({}, { recipient: recipients });
       return res.status(200).json({ success: true });
     } else {
-      let triggers = [];
+      let triggers: any = [];
       if (setting && setting.trigger && setting.trigger.length > 0) triggers = setting.trigger;
       triggers.push({ title: value });
       if (setting === null) {
@@ -688,7 +688,7 @@ export const getNotificationType = async (req: Request, res: Response) => {
 export const setNotificationAuto = async (req: Request, res: Response) => {
   try {
     const { id, no, auto } = req.body;
-    const type = await NotificationType.findById(id);
+    const type: any = await NotificationType.findById(id);
     let info = type.info;
     info[no].auto = auto;
     await NotificationType.findByIdAndUpdate(id, { info: info });

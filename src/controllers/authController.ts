@@ -30,7 +30,7 @@ function calcTime() {
 
 export const setFirstLogin = async () => {
   try {
-    const users = await User.find()
+    const users: any = await User.find()
     let setFuncs: Array<any> = []
     for (const user of users) setFuncs.push(User.findByIdAndUpdate(user._id, { firstLogin: false }))
     Promise.all(setFuncs)
@@ -42,7 +42,7 @@ export const setFirstLogin = async () => {
 export const getTipState = async (req: Request, res: Response) => {
   try {
     const { userId } = req.body
-    const result = await Promise.all([
+    const result: any = await Promise.all([
       DareMe.find({ owner: userId, finished: true }),
       FundMe.find({ owner: userId, finished: true }),
       User.findById(userId)
@@ -75,8 +75,8 @@ export const googleSignin = async (req: Request, res: Response) => {
 
     // Promise.all(funcs)
 
-    const user = await User.findOne({ email: email });
-    const adminDonuts = await AdminWallet.findOne({ admin: "ADMIN" });
+    const user: any = await User.findOne({ email: email });
+    const adminDonuts: any = await AdminWallet.findOne({ admin: "ADMIN" });
     if (user) {
       const password = userData.email + userData.googleId;
       bcrypt.compare(password, user.password, (err, isMatch) => {
@@ -142,9 +142,9 @@ export const googleSignup = async (req: Request, res: Response) => {
       User.findOne({ email: email })
     ])
 
-    const generalSetting = result[0]
-    const adminDonuts = result[1]
-    const user = result[2]
+    const generalSetting: any = result[0]
+    const adminDonuts: any = result[1]
+    const user: any = result[2]
 
     let referralLink: any = null
     if (referral.userId) referralLink = await ReferralLink.findOne({ user: referral.userId })
@@ -258,8 +258,8 @@ export const appleSignin = async (req: Request, res: Response) => {
     const browser = userData.browser
 
     const decodeToken: any = jwt.decode(token)
-    const user = await User.findOne({ email: decodeToken.email });
-    const adminDonuts = await AdminWallet.findOne({ admin: "ADMIN" });
+    const user: any = await User.findOne({ email: decodeToken.email });
+    const adminDonuts: any = await AdminWallet.findOne({ admin: "ADMIN" });
     if (user) {
       const password = decodeToken.email + decodeToken.sub;
       bcrypt.compare(password, user.password, (err, isMatch) => {
@@ -320,7 +320,7 @@ export const appleSignup = async (req: Request, res: Response) => {
 
     const decodeToken: any = jwt.decode(token)
 
-    const result = await Promise.all([
+    const result: any = await Promise.all([
       GeneralSetting.findOne(),
       AdminWallet.findOne(),
       User.findOne({ email: decodeToken.email })
@@ -334,7 +334,7 @@ export const appleSignup = async (req: Request, res: Response) => {
     if (referral.userId) referralLink = await ReferralLink.findOne({ user: referral.userId })
     if (user) appleSignin(req, res)
     else {
-      const users = await User.find()
+      const users: any = await User.find()
       let link: any = null
       while (1) {
         let flag = false
@@ -442,8 +442,8 @@ export const facebookSignin = async (req: Request, res: Response) => {
     const email = userData.email;
     const browser = userData.browser;
 
-    const user = await User.findOne({ email: email });
-    const adminDonuts = await AdminWallet.findOne({ admin: "ADMIN" });
+    const user: any = await User.findOne({ email: email });
+    const adminDonuts: any = await AdminWallet.findOne({ admin: "ADMIN" });
     if (user) {
       const password = userData.email + userData.facebookId;
       bcrypt.compare(password, user.password, (err, isMatch) => {
@@ -495,15 +495,15 @@ export const facebookSignup = async (req: Request, res: Response) => {
     const userData = req.body;
     const email = userData.email;
     const browser = userData.browser;
-    const adminWallet = await AdminWallet.find({});
+    const adminWallet: any = await AdminWallet.find({});
     let role = "USER";
     if (adminWallet.length === 0) {
       role = "ADMIN";
       const admin = new AdminWallet({ admin: "ADMIN", date: calcTime() });
       await admin.save();
     }
-    const adminDonuts = await AdminWallet.findOne({ admin: "ADMIN" });
-    const user = await User.findOne({ email: email });
+    const adminDonuts: any = await AdminWallet.findOne({ admin: "ADMIN" });
+    const user: any = await User.findOne({ email: email });
     if (user) facebookSignin(req, res)
     else {
       const password = userData.email + userData.facebookId;
@@ -576,9 +576,9 @@ export const facebookSignup = async (req: Request, res: Response) => {
 export const getAuthData = async (req: Request, res: Response) => {
   try {
     const { userId } = req.body;
-    const user = await User.findById(userId);
+    const user: any = await User.findById(userId);
     // if (!user) return res.status(200).json({ user: null });
-    const adminDonuts = await AdminWallet.findOne({ admin: "ADMIN" });
+    const adminDonuts: any = await AdminWallet.findOne({ admin: "ADMIN" });
     const payload = {
       id: user._id,
       name: user.name,
@@ -600,7 +600,7 @@ export const getAuthData = async (req: Request, res: Response) => {
 export const saveProfileInfo = async (req: Request, res: Response) => {
   try {
     const { userId, name, creatoUrl, category, path } = req.body;
-    const user = await User.findById(userId);
+    const user: any = await User.findById(userId);
     let realPath = user.avatar;
     if (path) {
       realPath = path;
@@ -611,8 +611,8 @@ export const saveProfileInfo = async (req: Request, res: Response) => {
         });
       }
     }
-    const updatedUser = await User.findByIdAndUpdate(userId, { name: name, personalisedUrl: creatoUrl, categories: category, avatar: realPath }, { new: true });
-    const adminDonuts = await AdminWallet.findOne({ admin: "ADMIN" });
+    const updatedUser: any = await User.findByIdAndUpdate(userId, { name: name, personalisedUrl: creatoUrl, categories: category, avatar: realPath }, { new: true });
+    const adminDonuts: any = await AdminWallet.findOne({ admin: "ADMIN" });
     const payload = {
       id: updatedUser._id,
       name: updatedUser.name,
@@ -749,8 +749,8 @@ export const getUserFromUrl = async (req: Request, res: Response) => {
 export const inviteFriend = async (req: Request, res: Response) => {
   try {
     const { referralLink } = req.body
-    const user = await User.findOne({ referralLink: referralLink })
-    const referral = await ReferralLink.findOne({ user: user._id })
+    const user: any = await User.findOne({ referralLink: referralLink })
+    const referral: any = await ReferralLink.findOne({ user: user._id })
     let index = 0
     if (referral) {
 

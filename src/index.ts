@@ -1,5 +1,5 @@
 import express from "express";
-import mongoose from "mongoose";
+import mongoose, { ConnectOptions } from "mongoose";
 import cors from "cors";
 import cron from "node-cron";
 import http from "http";
@@ -39,19 +39,15 @@ app.use((req: Request, res: Response, next) => {
 });
 
 //DB connection
-mongoose.connect(
-  "mongodb://127.0.0.1:27017/dareme",
+mongoose.connect("mongodb://127.0.0.1:27017/dareme",
   {
     useNewUrlParser: true,
-    useUnifiedTopology: true,
-    useFindAndModify: false,
-    useCreateIndex: true,
-  },
-  (err) => {
-    if (err) throw err;
+    useUnifiedTopology: true
+  } as ConnectOptions)
+  .then((res) => {
     console.log("Connected to Mongo DB!!");
-  }
-);
+  }).catch((err) => console.log(err))
+
 
 //Routes
 app.use("/api/auth", auth);
