@@ -142,12 +142,12 @@ export const googleSignup = async (req: Request, res: Response) => {
       User.findOne({ email: email })
     ])
 
-    const generalSetting = result[0] 
+    const generalSetting = result[0]
     const adminDonuts = result[1]
     const user = result[2]
 
     let referralLink: any = null
-    if(referral.userId) referralLink = await ReferralLink.findOne({ user: referral.userId })
+    if (referral.userId) referralLink = await ReferralLink.findOne({ user: referral.userId })
     if (user) googleSignin(req, res)
     else {
       const users = await User.find()
@@ -215,7 +215,7 @@ export const googleSignup = async (req: Request, res: Response) => {
                         $email: updatedUser.email,
                       });
 
-                      if(referralLink) {
+                      if (referralLink) {
                         let users = [...referralLink.invitedUsers]
                         users[referral.index] = {
                           date: users[referral.index].date,
@@ -225,7 +225,7 @@ export const googleSignup = async (req: Request, res: Response) => {
                         }
 
                         ReferralLink.findByIdAndUpdate(referralLink._id, {
-                          expected: generalSetting.referralLinkDonuts,
+                          expected: referralLink.expected + generalSetting.referralLinkDonuts,
                           invitedUsers: users
                         }).exec()
                       }
@@ -326,12 +326,12 @@ export const appleSignup = async (req: Request, res: Response) => {
       User.findOne({ email: decodeToken.email })
     ])
 
-    const generalSetting = result[0] 
+    const generalSetting = result[0]
     const adminDonuts = result[1]
     const user = result[2]
 
     let referralLink: any = null
-    if(referral.userId) referralLink = await ReferralLink.findOne({ user: referral.userId })
+    if (referral.userId) referralLink = await ReferralLink.findOne({ user: referral.userId })
     if (user) appleSignin(req, res)
     else {
       const users = await User.find()
@@ -400,7 +400,7 @@ export const appleSignup = async (req: Request, res: Response) => {
                         $email: updatedUser.email,
                       });
 
-                      if(referralLink) {
+                      if (referralLink) {
                         let users = [...referralLink.invitedUsers]
                         users[referral.index] = {
                           date: users[referral.index].date,
@@ -410,11 +410,11 @@ export const appleSignup = async (req: Request, res: Response) => {
                         }
 
                         ReferralLink.findByIdAndUpdate(referralLink._id, {
-                          expected: generalSetting.referralLinkDonuts,
+                          expected: referralLink.expected + generalSetting.referralLinkDonuts,
                           invitedUsers: users
                         }).exec()
                       }
-                      
+
                       mixpanel.track("Sign Up", {
                         'Sign Up Method': 'Apple',
                         'Browser Used': browser,

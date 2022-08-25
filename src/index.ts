@@ -19,6 +19,7 @@ import payment from "./Routes/api/payment";
 import notification from "./Routes/api/notification";
 import transaction from "./Routes/api/transaction";
 import tip from "./Routes/api/tip";
+import referral from "./Routes/api/referral";
 
 const app = express();
 const PORT = 5000;
@@ -61,6 +62,7 @@ app.use("/api/payment", payment);
 app.use("/api/notification", notification);
 app.use("/api/transactions", transaction);
 app.use("/api/tip", tip);
+app.use("/api/referral", referral);
 // app.use(express.static('../dist'));
 app.use(express.static("public"));
 
