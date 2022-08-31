@@ -64,7 +64,7 @@ export const googleSignin = async (req: Request, res: Response) => {
     const user: any = await User.findOne({ email: email });
     const adminDonuts: any = await AdminWallet.findOne({ admin: "ADMIN" });
     if (user) {
-      if(user.language !== userData.lang) await User.findByIdAndUpdate(user._id, { language: userData.lang })
+      if (user.language !== userData.lang) await User.findByIdAndUpdate(user._id, { language: userData.lang })
       const password = userData.email + userData.googleId;
       bcrypt.compare(password, user.password, (err, isMatch) => {
         if (isMatch) {
@@ -249,7 +249,7 @@ export const appleSignin = async (req: Request, res: Response) => {
     const user: any = await User.findOne({ email: decodeToken.email });
     const adminDonuts: any = await AdminWallet.findOne({ admin: "ADMIN" });
     if (user) {
-      if(user.language !== userData.lang) await User.findByIdAndUpdate(user._id, { language: userData.lang })
+      if (user.language !== userData.lang) await User.findByIdAndUpdate(user._id, { language: userData.lang })
       const password = decodeToken.email + decodeToken.sub;
       bcrypt.compare(password, user.password, (err, isMatch) => {
         if (isMatch) {
@@ -759,6 +759,48 @@ export const inviteFriend = async (req: Request, res: Response) => {
     }
 
     return res.status(200).json({ success: true, data: { index: index, userId: user._id } })
+  } catch (err) {
+    console.log(err)
+  }
+}
+
+export const getCreatorsByCategory = async (req: Request, res: Response) => {
+  try {
+    const { categories } = req.body
+    const finishedDareme = DareMe.find({ finished: true }).populate({ path: 'owner' })
+    const finishedFundme = FundMe.find({ finished: true }).populate({ path: 'owner' })
+
+    const result: any = await Promise.all([finishedDareme, finishedFundme])
+
+    let users = <Array<any>>[];
+    for (const dareme of result[0]) {
+      const filters = users.filter((user: any) => (user._id + '') === (dareme.owner._id + ''))
+      if (filters.length === 0 && dareme.owner.role === 'USER') {
+        users.push(dareme.owner);
+      }
+    }
+
+    for (const fundme of result[1]) {
+      const filters = users.filter((user: any) => (user._id + '') === (fundme.owner._id + ''))
+      if (filters.length === 0 && fundme.owner.role === 'USER') {
+        users.push(fundme.owner);
+      }
+    }
+    if (categories.length !== 0) {
+      const filterUsers = users.filter((user: any) => {
+        for(let i = 0 ; i < categories.length ; i++) if (user.categories.indexOf(categories[i]) !== -1) return true 
+        return false
+      })
+      users = [...filterUsers]
+    }
+
+    const newArr1 = users.slice()
+    for (let i = newArr1.length - 1; i > 0; i--) {
+      const rand = Math.floor(Math.random() * (i + 1));
+      [newArr1[i], newArr1[rand]] = [newArr1[rand], newArr1[i]];
+    }
+
+    return res.status(200).json({ success: true, creators: newArr1 })
   } catch (err) {
     console.log(err)
   }
