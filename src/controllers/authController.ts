@@ -61,28 +61,16 @@ export const googleSignin = async (req: Request, res: Response) => {
     const email = userData.email
     const browser = userData.browser
 
-    // const users = await User.find()
-    // const links = voucher_codes.generate({
-    //     length: 10,
-    //     count: users.length,
-    //     charset: '0123456789abcdefghijklmnopqrstuvwxyz',
-    // })
-
-    // let funcs: Array<any> = []
-    // links.forEach((link, index) => {
-    //     funcs.push(User.findByIdAndUpdate(users[index]._id, { referralLink: link }))
-    // })
-
-    // Promise.all(funcs)
-
     const user: any = await User.findOne({ email: email });
     const adminDonuts: any = await AdminWallet.findOne({ admin: "ADMIN" });
     if (user) {
+      if(user.language !== userData.lang) await User.findByIdAndUpdate(user._id, { language: userData.lang })
       const password = userData.email + userData.googleId;
       bcrypt.compare(password, user.password, (err, isMatch) => {
         if (isMatch) {
           let wallet = user.wallet;
           if (user.role === "ADMIN") wallet = adminDonuts.wallet;
+
           const payload = {
             id: user._id,
             name: user.name,
@@ -91,7 +79,7 @@ export const googleSignin = async (req: Request, res: Response) => {
             wallet: wallet,
             email: user.email,
             personalisedUrl: user.personalisedUrl,
-            language: user.language,
+            language: userData.lang,
             category: user.categories,
             new_notification: user.new_notification,
             referralLink: user.referralLink
@@ -261,6 +249,7 @@ export const appleSignin = async (req: Request, res: Response) => {
     const user: any = await User.findOne({ email: decodeToken.email });
     const adminDonuts: any = await AdminWallet.findOne({ admin: "ADMIN" });
     if (user) {
+      if(user.language !== userData.lang) await User.findByIdAndUpdate(user._id, { language: userData.lang })
       const password = decodeToken.email + decodeToken.sub;
       bcrypt.compare(password, user.password, (err, isMatch) => {
         if (isMatch) {
@@ -274,7 +263,7 @@ export const appleSignin = async (req: Request, res: Response) => {
             wallet: wallet,
             email: user.email,
             personalisedUrl: user.personalisedUrl,
-            language: user.language,
+            language: userData.lang,
             category: user.categories,
             new_notification: user.new_notification,
             referralLink: user.referralLink
