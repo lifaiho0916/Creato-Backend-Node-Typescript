@@ -607,14 +607,27 @@ export const getDaremesByPersonalUrl = async (req: Request, res: Response) => {
   try {
     const { url } = req.body;
     let results: Array<object> = [];
-    const user: any = await User.findOne({ personalisedUrl: url }).select({ 'name': 1, 'avatar': 1, 'personalisedUrl': 1, 'categories': 1, 'subscribed_users': 1, 'tipFunction': 1 });
-    const userDaremes: any = await DareMe.find({ owner: user._id, published: true, show: true })
-      .populate({ path: 'owner', select: { 'name': 1, 'avatar': 1, 'personalisedUrl': 1, 'status': 1 } })
-      .populate({ path: 'options.option', select: { 'donuts': 1, '_id': 0, 'status': 1, 'voters': 1, 'voteInfo': 1 } })
-      .select({ 'published': 0, 'wallet': 0, '__v': 0 });
-    const userFundmes = await FundMe.find({ owner: user._id, published: true, show: true })
-      .populate({ path: 'owner', select: { 'name': 1, 'avatar': 1, 'personalisedUrl': 1, 'status': 1 } })
-      .select({ 'published': 0, '__v': 0 });
+    const user: any = await User.findOne({ personalisedUrl: url }).select({ 'name': 1, 'avatar': 1, 'personalisedUrl': 1, 'categories': 1, 'subscribed_users': 1, 'tipFunction': 1 })
+    const result: any = await Promise.all([
+      DareMe.find({ owner: user._id, published: true, show: true })
+        .populate({ path: 'owner', select: { 'name': 1, 'avatar': 1, 'personalisedUrl': 1, 'status': 1 } })
+        .populate({ path: 'options.option', select: { 'donuts': 1, '_id': 0, 'status': 1, 'voters': 1, 'voteInfo': 1 } })
+        .select({ 'published': 0, 'wallet': 0, '__v': 0 }),
+      FundMe.find({ owner: user._id, published: true, show: true })
+        .populate({ path: 'owner', select: { 'name': 1, 'avatar': 1, 'personalisedUrl': 1, 'status': 1 } })
+        .select({ 'published': 0, '__v': 0 }),
+      DareMe.find({ published: true, show: true })
+        .where('owner').ne(user._id)
+        .populate({ path: 'owner', select: { 'name': 1, 'avatar': 1, 'personalisedUrl': 1 } })
+        .populate({ path: 'options.option', select: { 'donuts': 1, '_id': 0, 'writer': 1, 'status': 1, 'voteInfo': 1 } })
+        .select({ 'published': 0, 'wallet': 0, '__v': 0 }),
+      FundMe.find({ published: true, show: true })
+        .where('owner').ne(user._id)
+        .populate({ path: 'owner', select: { 'name': 1, 'avatar': 1, 'personalisedUrl': 1 } })
+    ])
+
+    const userDaremes = result[0]
+    const userFundmes = result[1]
 
     const ongoings: Array<object> = [];
     const finishes: Array<object> = [];
@@ -718,11 +731,7 @@ export const getDaremesByPersonalUrl = async (req: Request, res: Response) => {
     finishes.sort((first: any, second: any) => { return new Date(first.date).getTime() > new Date(second.date).getTime() ? 1 : new Date(first.date).getTime() < new Date(second.date).getTime() ? -1 : 0; });
     results = ongoings.concat(finishes);
 
-    const daredDaremes = await DareMe.find({ published: true, show: true })
-      .where('owner').ne(user._id)
-      .populate({ path: 'owner', select: { 'name': 1, 'avatar': 1, 'personalisedUrl': 1 } })
-      .populate({ path: 'options.option', select: { 'donuts': 1, '_id': 0, 'writer': 1, 'status': 1, 'voteInfo': 1 } })
-      .select({ 'published': 0, 'wallet': 0, '__v': 0 });
+    const daredDaremes = result[2];
 
     daredDaremes.filter((daredDareme: any) => daredDareme.finished === false).sort((first: any, second: any) => {
       return new Date(first.date).getTime() > new Date(second.date).getTime() ? 1 : new Date(first.date).getTime() < new Date(second.date).getTime() ? -1 : 0;
@@ -800,9 +809,7 @@ export const getDaremesByPersonalUrl = async (req: Request, res: Response) => {
       }
     });
 
-    const fundedFundmes = await FundMe.find({ published: true, show: true })
-      .where('owner').ne(user._id)
-      .populate({ path: 'owner', select: { 'name': 1, 'avatar': 1, 'personalisedUrl': 1 } })
+    const fundedFundmes = result[3]
 
     fundedFundmes.sort((first: any, second: any) => {
       return new Date(first.date).getTime() > new Date(second.date).getTime() ? 1 : new Date(first.date).getTime() < new Date(second.date).getTime() ? -1 : 0;

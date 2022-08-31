@@ -463,34 +463,52 @@ export const getFanwallsByPersonalUrl = async (req: Request, res: Response) => {
     const { url } = req.body;
     let resFanwalls = <Array<any>>[];
     const user: any = await User.findOne({ personalisedUrl: url }).select({ 'name': 1, 'avatar': 1, 'personalisedUrl': 1, 'categories': 1, 'subscribed_users': 1, 'tipFunction': 1 });
-    const rewardFanwalls: any = await Fanwall.find({ posted: true }).where('owner').ne(user._id)
-      .populate({ path: 'writer', select: { 'avatar': 1, 'name': 1, 'personalisedUrl': 1 } })
-      .populate([
-        {
-          path: 'dareme',
-          model: DareMe,
-          populate: [
-            {
-              path: 'options.option',
-              model: Option
-            },
-            {
-              path: 'owner',
-              model: User
-            }
-          ]
-        },
-        {
-          path: 'fundme',
-          model: FundMe,
-          populate: [
-            {
-              path: 'owner',
-              model: User
-            }
-          ]
-        }]
-      );
+
+    const result: any = await Promise.all([
+      DareMe.find({ owner: user._id, published: true, show: true })
+        .populate({ path: 'owner', select: { 'name': 1, 'avatar': 1, 'personalisedUrl': 1, 'status': 1 } })
+        .populate({ path: 'options.option', select: { 'donuts': 1, '_id': 0, 'status': 1, 'voters': 1, 'voteInfo': 1 } })
+        .select({ 'published': 0, 'wallet': 0, '__v': 0 }),
+      FundMe.find({ owner: user._id, published: true, show: true })
+        .populate({ path: 'owner', select: { 'name': 1, 'avatar': 1, 'personalisedUrl': 1, 'status': 1 } })
+        .select({ 'published': 0, '__v': 0 }),
+      Fanwall.find({ posted: true }).where('owner').ne(user._id)
+        .populate({ path: 'writer', select: { 'avatar': 1, 'name': 1, 'personalisedUrl': 1 } })
+        .populate([{ path: 'dareme', model: DareMe, populate: [{ path: 'options.option', model: Option }, { path: 'owner', model: User }] },
+        { path: 'fundme', model: FundMe, populate: [{ path: 'owner', model: User }] }]),
+      Fanwall.find({ writer: user._id, posted: true })
+        .populate({ path: 'writer', select: { 'avatar': 1, 'name': 1, 'personalisedUrl': 1 } })
+        .populate([{ path: 'dareme', model: DareMe, populate: [{ path: 'options.option', model: Option }, { path: 'owner', model: User }] },
+        { path: 'fundme', model: FundMe, populate: [{ path: 'owner', model: User }] }]),
+      Tip.find({ user: user._id, show: true }).populate({ path: 'tipper', select: { 'avatar': 1, 'name': 1 } })
+    ])
+
+    let voterCount = 0
+    const userDaremes = result[0]
+    const userFundmes = result[1]
+
+    userDaremes.filter((userDareme: any) => userDareme.finished === true).forEach((dareme: any) => {
+      dareme.options.forEach((option: any) => {
+        if (option.option.voters !== 0) {
+          option.option.voteInfo.forEach((voter: any) => {
+            if (voter.donuts > 1)
+              voterCount++;
+          })
+        }
+      })
+    })
+
+    userFundmes.filter((userFundme: any) => userFundme.finished === true).forEach((fundme: any) => {
+      if (fundme.voteInfo.length > 0) {
+        fundme.voteInfo.forEach((voter: any) => {
+          if (voter.donuts > 1)
+            voterCount++;
+        })
+      }
+    })
+
+    const rewardFanwalls = result[2]
+
     rewardFanwalls.forEach((fanwall: any) => {
       if (fanwall.dareme) {
         const options = fanwall.dareme.options.filter((option: any) => option.option.win === true);
@@ -559,34 +577,7 @@ export const getFanwallsByPersonalUrl = async (req: Request, res: Response) => {
       }
     });
 
-    const fanwalls: any = await Fanwall.find({ writer: user._id, posted: true })
-      .populate({ path: 'writer', select: { 'avatar': 1, 'name': 1, 'personalisedUrl': 1 } })
-      .populate([
-        {
-          path: 'dareme',
-          model: DareMe,
-          populate: [
-            {
-              path: 'options.option',
-              model: Option
-            },
-            {
-              path: 'owner',
-              model: User
-            }
-          ]
-        },
-        {
-          path: 'fundme',
-          model: FundMe,
-          populate: [
-            {
-              path: 'owner',
-              model: User
-            }
-          ]
-        }]
-      );
+    const fanwalls = result[3];
     fanwalls.forEach((fanwall: any) => {
       if (fanwall.dareme) {
         let totalDonuts = 0;
@@ -635,12 +626,12 @@ export const getFanwallsByPersonalUrl = async (req: Request, res: Response) => {
     });
 
     //get Tips data.
-    const tips = await Tip.find({ user: user._id, show: true }).populate({ path: 'tipper', select: { 'avatar': 1, 'name': 1 } });
+    const tips = result[4];
     let resultTips = tips.sort((first: any, second: any) => {
       return first.tip < second.tip ? 1 : first.tip > second.tip ? -1 :
         first.date > second.date ? -1 : first.date < second.date ? 1 : 0;
     });
-    return res.status(200).json({ success: true, fanwalls: resFanwalls, tips: resultTips, user: user });
+    return res.status(200).json({ success: true, fanwalls: resFanwalls, tips: resultTips, user: user, voterCount: voterCount});
   } catch (err) {
     console.log(err);
   }
@@ -862,7 +853,7 @@ export const setTransaction = async (req: Request, res: Response) => {
 export const setUser = async (req: Request, res: Response) => {
   const transactions: any = await AdminUserTransaction.find({ description: 4, from: 'DAREME', to: 'USER' });
   if (transactions.length > 0) {
-    for(const item of transactions) {
+    for (const item of transactions) {
       let admin: any = await AdminUserTransaction.findOne({ dareme: item.dareme, description: 4, from: 'DAREME', to: 'ADMIN' });
       await AdminUserTransaction.findByIdAndUpdate(item._id, { user: admin.user ? admin.user : item.user ? item.user : 'admin' });
     }
