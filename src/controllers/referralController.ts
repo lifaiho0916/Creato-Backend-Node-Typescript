@@ -52,7 +52,7 @@ export const transferDonuts = async (req: Request, res: Response) => {
     const result1 = await Promise.all([
       AdminWallet.findOneAndUpdate({ wallet: adminWallet - donuts }),
       User.findByIdAndUpdate(referral.user._id, { wallet: referral.user.wallet + donuts }),
-      ReferralLink.findByIdAndUpdate(referral._id, { earned: referral.earned + donuts, invitedUsers: users }, { new: true })
+      ReferralLink.findByIdAndUpdate(referral._id, { earned: referral.earned + donuts, invitedUsers: users }, { new: true }).populate([{ path: 'user' }, { path: 'invitedUsers.newUser' }])
     ])
     const updateReferral = result1[2]
 
