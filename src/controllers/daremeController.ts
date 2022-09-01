@@ -611,7 +611,7 @@ export const getDaremesByPersonalUrl = async (req: Request, res: Response) => {
     const result: any = await Promise.all([
       DareMe.find({ owner: user._id, published: true, show: true })
         .populate({ path: 'owner', select: { 'name': 1, 'avatar': 1, 'personalisedUrl': 1, 'status': 1 } })
-        .populate({ path: 'options.option', select: { 'donuts': 1, '_id': 0, 'status': 1, 'voters': 1, 'voteInfo': 1 } })
+        .populate({ path: 'options.option', select: { 'donuts': 1, '_id': 0, 'status': 1, 'voters': 1, 'voteInfo': 1, 'win': 1, 'requests': 1 } })
         .select({ 'published': 0, 'wallet': 0, '__v': 0 }),
       FundMe.find({ owner: user._id, published: true, show: true })
         .populate({ path: 'owner', select: { 'name': 1, 'avatar': 1, 'personalisedUrl': 1, 'status': 1 } })
@@ -671,18 +671,17 @@ export const getDaremesByPersonalUrl = async (req: Request, res: Response) => {
       });
     });
 
-    let voterCount = 0;
+    let voterCount = 0
+    let earnings = 0
 
     userDaremes.filter((userDareme: any) => userDareme.finished === true).forEach((dareme: any) => {
       let donuts = 0;
       dareme.options.forEach((option: any) => {
-        if (option.option.status === 1)
-          donuts += option.option.donuts;
-        if (option.option.voters !== 0) {
-          option.option.voteInfo.forEach((voter: any) => {
-            if (voter.donuts > 1)
-              voterCount++;
-          })
+        if (option.option.status === 1) {
+          if(option.option.win === true) earnings = earnings + option.option.donuts
+          if(option.option.requests) earnings = earnings + option.option.requests
+          donuts += option.option.donuts
+          option.option.voteInfo.forEach((voter: any) => { if (voter.donuts > 1) voterCount++ })
         }
       });
       finishes.push({
@@ -704,10 +703,8 @@ export const getDaremesByPersonalUrl = async (req: Request, res: Response) => {
 
     userFundmes.filter((userFundme: any) => userFundme.finished === true).forEach((fundme: any) => {
       if (fundme.voteInfo.length > 0) {
-        fundme.voteInfo.forEach((voter: any) => {
-          if (voter.donuts > 1)
-            voterCount++;
-        })
+        earnings = earnings + fundme.wallet
+        fundme.voteInfo.forEach((voter: any) => { if (voter.donuts > 1) voterCount++ })
       }
       finishes.push({
         _id: fundme._id,
@@ -845,7 +842,7 @@ export const getDaremesByPersonalUrl = async (req: Request, res: Response) => {
       }
     })
 
-    return res.status(200).json({ daremes: results, user: user, voterCount: voterCount });
+    return res.status(200).json({ daremes: results, user: user, voterCount: voterCount, earnings: earnings * 0.9 });
   } catch (err) {
     console.log(err);
   }
