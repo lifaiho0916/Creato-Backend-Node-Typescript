@@ -380,7 +380,7 @@ export const checkOngoingdaremes = async (io: any) => {
       }
 
       const calc = (new Date(dareme.date).getTime() + 1000 * 3600 * 24 * (dareme.deadline - 1)) - new Date(calcTime()).getTime()
-      if (calc >= -20000 && calc <= 0) { /// refund donuts of rejected dare
+      if (calc >= -10000 && calc <= 0) { /// refund donuts of rejected dare
         const options = dareme.options.filter((option: any) => option.option.status === 0)
         for (const option of options) {
           const user: any = await User.findById(option.option.writer)
