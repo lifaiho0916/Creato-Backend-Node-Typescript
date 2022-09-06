@@ -70,8 +70,8 @@ server.listen(PORT, () => {
   console.log(`The Server is up and running on PORT ${PORT}`)
 });
 
-cron.schedule("* * * * *", () => checkOngoingdaremes(io))
-cron.schedule("* * * * *", () => checkOngoingfundmes(io))
+cron.schedule("*/20 * * * * *", () => checkOngoingdaremes(io))
+cron.schedule("*/20 * * * * *", () => checkOngoingfundmes(io))
 cron.schedule("59 23 * * *", () => setFirstLogin(), {
   scheduled: true,
   timezone: "Asia/Hong_Kong",
