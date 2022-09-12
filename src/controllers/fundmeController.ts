@@ -123,33 +123,15 @@ export const checkFundMeFinished = async (req: Request, res: Response) => {
 export const getFundmeDetails = async (req: Request, res: Response) => {
   try {
     const { fundmeId } = req.params;
-    const fundme: any = await FundMe.findById(fundmeId)
-      .populate({ path: 'owner', select: { 'avatar': 1, 'personalisedUrl': 1, 'name': 1, '_id': 1 } })
-      .select({ 'published': 0, '__v': 0 });
+    const fundme: any = await FundMe.findById(fundmeId).populate({ path: 'owner' })
     if (fundme) {
       const result = {
-        _id: fundme._id,
-        owner: fundme.owner,
-        title: fundme.title,
-        deadline: fundme.deadline,
-        category: fundme.category,
-        teaser: fundme.teaser,
-        goal: fundme.goal,
-        reward: fundme.reward,
-        rewardText: fundme.rewardText,
-        wallet: fundme.wallet,
-        cover: fundme.cover,
-        sizeType: fundme.sizeType,
-        finished: fundme.finished,
-        voteInfo: fundme.voteInfo,
-        show: fundme.show,
+        ...fundme._doc,
         time: (new Date(fundme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * fundme.deadline + 1000 * 60) / (24 * 3600 * 1000),
-      };
-      return res.status(200).json({ success: true, fundme: result });
+      }
+      return res.status(200).json({ success: true, fundme: result })
     }
-  } catch (err) {
-    console.log(err);
-  }
+  } catch (err) { console.log(err) }
 }
 
 export const fundCreator = async (req: Request, res: Response) => {
@@ -318,34 +300,16 @@ export const checkOngoingfundmes = async (io: any) => {
 export const getFundmeResult = async (req: Request, res: Response) => {
   try {
     const { fundmeId } = req.params;
-    const fundme: any = await FundMe.findById(fundmeId)
-      .populate([{ path: 'owner', select: { 'avatar': 1, 'personalisedUrl': 1, 'name': 1, '_id': 1 } }, { path: 'voteInfo.voter', select: { '_id': 0, 'name': 1, 'canFee': 1 } }])
-      .select({ 'published': 0, '__v': 0 });
+    const fundme: any = await FundMe.findById(fundmeId).populate([{ path: 'owner' }, { path: 'voteInfo.voter' }])
     if (fundme) {
-      const fanwall: any = await Fanwall.findOne({ fundme: fundme._id }).select({ '__v': 0, 'data': 0 });
-      // let donuts = 0;
+      const fanwall: any = await Fanwall.findOne({ fundme: fundme._id })
       const result = {
-        _id: fundme._id,
-        owner: fundme.owner,
-        title: fundme.title,
-        deadline: fundme.deadline,
-        category: fundme.category,
-        teaser: fundme.teaser,
-        goal: fundme.goal,
-        reward: fundme.reward,
-        rewardText: fundme.rewardText,
-        wallet: fundme.wallet,
-        cover: fundme.cover,
-        sizeType: fundme.sizeType,
-        finished: fundme.finished,
-        voteInfo: fundme.voteInfo,
+        ...fundme._doc,
         time: (new Date(fundme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * fundme.deadline + 1000 * 60) / (24 * 3600 * 1000),
-      };
-      return res.status(200).json({ success: true, fundme: result, fanwall: fanwall });
+      }
+      return res.status(200).json({ success: true, fundme: result, fanwall: fanwall })
     }
-  } catch (err) {
-    console.log(err);
-  }
+  } catch (err) { console.log(err) }
 }
 
 export const getFundMeList = async (req: Request, res: Response) => {

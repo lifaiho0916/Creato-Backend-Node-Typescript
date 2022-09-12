@@ -138,56 +138,31 @@ export const declineDareOption = async (req: Request, res: Response) => {
 export const getDaremeDetails = async (req: Request, res: Response) => {
   try {
     const { daremeId } = req.params
-    const dareme: any = await DareMe.findById(daremeId)
-      .populate({ path: 'owner', select: { 'avatar': 1, 'personalisedUrl': 1, 'name': 1, '_id': 1 } })
-      .populate({
-        path: 'options.option',
-        model: Option,
-        populate: { path: 'writer', select: { '_id': 1, 'name': 1 } },
-        select: { '__v': 0 },
-      }).select({ 'published': 0, 'wallet': 0, '__v': 0 })
+    const dareme: any = await DareMe.findById(daremeId).populate([{ path: 'owner' }, { path: 'options.option', populate: { path: 'writer' } }])
 
     if (dareme) {
       let donuts = 0
-      dareme.options.forEach((option: any) => { if (option.option.status === 1) donuts += option.option.donuts; })
+      dareme.options.forEach((option: any) => {
+        if (option.option.status === 1) {
+          donuts += option.option.donuts
+          if (option.option.requests) donuts += option.option.requests
+        }
+      })
       const result = {
-        _id: dareme._id,
-        owner: dareme.owner,
-        title: dareme.title,
-        deadline: dareme.deadline,
-        category: dareme.category,
-        teaser: dareme.teaser,
+        ...dareme._doc,
         donuts: donuts,
-        cover: dareme.cover,
-        sizeType: dareme.sizeType,
-        options: dareme.options,
-        finished: dareme.finished,
-        coverIndex: dareme.coverIndex,
-        show: dareme.show,
-        reward: dareme.reward,
-        rewardText: dareme.rewardText,
-        time: (new Date(dareme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * dareme.deadline + 1000 * 60) / (24 * 3600 * 1000),
+        time: (new Date(dareme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * dareme.deadline + 1000 * 60) / (24 * 3600 * 1000)
       }
 
       return res.status(200).json({ success: true, dareme: result })
     }
-  } catch (err) {
-    console.log(err)
-  }
+  } catch (err) { console.log(err) }
 }
 
 export const getDaremeOptions = async (req: Request, res: Response) => {
   try {
     const { daremeId } = req.params
-    const dareme: any = await DareMe.findById(daremeId)
-      .populate({
-        path: 'options.option',
-        model: Option,
-        populate: [
-          { path: 'writer', select: { '_id': 1, 'name': 1, 'avatar': 1 } },
-          { path: 'voteInfo.voter', model: User, select: { '_id': 1, 'name': 1, 'avatar': 1 } }
-        ]
-      })
+    const dareme: any = await DareMe.findById(daremeId).populate({ path: 'options.option', populate: [{ path: 'writer' }, { path: 'voteInfo.voter' }] })
     const options = dareme.options
     let resOptions: Array<any> = []
 
@@ -335,6 +310,31 @@ export const supportRefund = async (req: Request, res: Response) => {
   } catch (err) {
     console.log(err)
   }
+}
+
+export const getDaremeResult = async (req: Request, res: Response) => {
+  try {
+    const { daremeId } = req.params;
+    const dareme: any = await DareMe.findById(daremeId).populate([{ path: 'owner' }, { path: 'options.option', populate: { path: 'writer' } }])
+    if (dareme) {
+      const fanwall = await Fanwall.findOne({ dareme: dareme._id })
+      const options = dareme.options.filter((option: any) => option.option.status === 1)
+      dareme.options = options
+      let donuts = 0
+      dareme.options.forEach((option: any) => {
+        if (option.option.status === 1) {
+          donuts += option.option.donuts
+          if (option.option.requests) donuts += option.option.requests
+        }
+      })
+      const result = {
+        ...dareme._doc,
+        donuts: donuts,
+        time: (new Date(dareme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * dareme.deadline + 1000 * 60) / (24 * 3600 * 1000),
+      }
+      return res.status(200).json({ success: true, dareme: result, fanwall: fanwall })
+    }
+  } catch (err) { console.log(err) }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -892,21 +892,12 @@ export const getDaremesOngoing = async (req: Request, res: Response) => {
       dareme.options.forEach((option: any) => {
         if (option.option.status === 1) {
           donuts += option.option.donuts
-          if (option.requests) donuts = option.requests
+          if (option.option.requests) donuts = option.option.requests
         }
       })
-
       resItems.push({
-        id: dareme._id,
-        owner: dareme.owner,
-        title: dareme.title,
-        teaser: dareme.teaser,
-        voters: dareme.voteInfo.length,
+        ...dareme._doc,
         donuts: donuts,
-        finished: dareme.finished,
-        sizeType: dareme.sizeType,
-        cover: dareme.cover,
-        date: dareme.date,
         fanwall: fanwall ? fanwall.posted : false,
         time: Math.round((new Date(dareme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * dareme.deadline) / 1000),
       })
@@ -917,17 +908,8 @@ export const getDaremesOngoing = async (req: Request, res: Response) => {
     for (const fundme of fundmes) {
       let fanwall = result2[index];
       resItems.push({
-        id: fundme._id,
-        goal: fundme.goal,
-        owner: fundme.owner,
-        title: fundme.title,
-        teaser: fundme.teaser,
-        voters: fundme.voteInfo.length,
+        ...fundme._doc,
         donuts: fundme.wallet,
-        finished: fundme.finished,
-        sizeType: fundme.sizeType,
-        cover: fundme.cover,
-        date: fundme.date,
         fanwall: fanwall ? fanwall.posted : false,
         time: Math.round((new Date(fundme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * fundme.deadline) / 1000),
       })
@@ -996,44 +978,6 @@ export const getDaremesOngoing = async (req: Request, res: Response) => {
     }
 
     return res.status(200).json({ success: true, daremes: newArr, fanwalls: resFanwalls, users: newArr1 });
-  } catch (err) {
-    console.log(err);
-  }
-}
-
-export const getDaremeResult = async (req: Request, res: Response) => {
-  try {
-    const { daremeId } = req.params;
-    const dareme: any = await DareMe.findById(daremeId)
-      .populate({ path: 'owner', select: { 'avatar': 1, 'personalisedUrl': 1, 'name': 1, '_id': 1 } })
-      .populate({
-        path: 'options.option',
-        model: Option,
-        populate: { path: 'writer', select: { '_id': 0, 'name': 1 } },
-        select: { '__v': 0 },
-      }).select({ 'published': 0, 'wallet': 0, '__v': 0 });
-    if (dareme) {
-      const fanwall = await Fanwall.findOne({ dareme: dareme._id }).select({ '__v': 0, 'data': 0 });
-      const options = dareme.options.filter((option: any) => option.option.status === 1);
-      dareme.options = options;
-      let donuts = 0;
-      dareme.options.forEach((option: any) => { if (option.option.status === 1) donuts += option.option.donuts; });
-      const result = {
-        _id: dareme._id,
-        owner: dareme.owner,
-        title: dareme.title,
-        deadline: dareme.deadline,
-        category: dareme.category,
-        teaser: dareme.teaser,
-        donuts: donuts,
-        cover: dareme.cover,
-        sizeType: dareme.sizeType,
-        options: dareme.options,
-        finished: dareme.finished,
-        time: (new Date(dareme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * dareme.deadline + 1000 * 60) / (24 * 3600 * 1000),
-      };
-      return res.status(200).json({ success: true, dareme: result, fanwall: fanwall });
-    }
   } catch (err) {
     console.log(err);
   }
