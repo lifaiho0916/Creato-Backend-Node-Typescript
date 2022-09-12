@@ -47,15 +47,15 @@ const DareMeSchema = new monogoose.Schema({
     sizeType: {
         type: Boolean
     },
-    show: {
-        type: Boolean,
-        default: true
-    },
     reward: {
         type: Number
     },
     rewardText: {
         type: String
+    },
+    show: {
+        type: Boolean,
+        default: true
     },
     date: {
         type: Date,

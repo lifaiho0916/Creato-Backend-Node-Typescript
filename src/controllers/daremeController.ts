@@ -678,8 +678,8 @@ export const getDaremesByPersonalUrl = async (req: Request, res: Response) => {
       let donuts = 0;
       dareme.options.forEach((option: any) => {
         if (option.option.status === 1) {
-          if(option.option.win === true) earnings = earnings + option.option.donuts
-          if(option.option.requests) earnings = earnings + option.option.requests
+          if (option.option.win === true) earnings = earnings + option.option.donuts
+          if (option.option.requests) earnings = earnings + option.option.requests
           donuts += option.option.donuts
           option.option.voteInfo.forEach((voter: any) => { if (voter.donuts > 1) voterCount++ })
         }
@@ -850,59 +850,30 @@ export const getDaremesByPersonalUrl = async (req: Request, res: Response) => {
 
 export const getDaremesOngoing = async (req: Request, res: Response) => {
   try {
-    const daremeFunc: any = DareMe.find({ published: true, show: true })
-      .populate({ path: 'owner', select: { 'avatar': 1, 'personalisedUrl': 1, 'name': 1 } })
-      .populate({ path: 'options.option', select: { 'donuts': 1, '_id': 0, 'status': 1 } })
-      .select({ 'published': 0, 'wallet': 0, '__v': 0 });
-    const fundmeFunc: any = FundMe.find({ published: true, show: true })
-      .populate({ path: 'owner', select: { 'avatar': 1, 'personalisedUrl': 1, 'name': 1 } })
-      .select({ 'published': 0, '__v': 0 });
-    const fanwallFunc: any = Fanwall.find({ posted: true })
-      .populate([
-        {
-          path: 'writer',
-          select: { 'avatar': 1, 'personalisedUrl': 1, 'name': 1 }
-        },
-        {
-          path: 'dareme',
-          model: DareMe,
-          select: {
-            'title': 1, 'deadline': 1, 'category': 1, 'reward': 1
-          },
-          populate: {
-            path: 'options.option',
-            model: Option
-          }
-        },
-        {
-          path: 'fundme',
-          model: FundMe,
-          select: {
-            'title': 1, 'deadline': 1, 'category': 1, 'goal': 1, 'wallet': 1, 'voteInfo': 1, 'reward': 1
-          }
-        }
-      ]);
+    const daremeFunc: any = DareMe.find({ published: true, show: true }).populate([{ path: 'owner' }, { path: 'options.option' }])
+    const fundmeFunc: any = FundMe.find({ published: true, show: true }).populate({ path: 'owner' })
+    const fanwallFunc: any = Fanwall.find({ posted: true }).populate([{ path: 'writer' }, { path: 'dareme', populate: { path: 'options.option' } }, { path: 'fundme' }])
 
     const finishedDareme = DareMe.find({ finished: true }).populate({ path: 'owner' })
     const finishedFundme = FundMe.find({ finished: true }).populate({ path: 'owner' })
 
-    const result: any = await Promise.all([daremeFunc, fundmeFunc, fanwallFunc, finishedDareme, finishedFundme]);
-    const daremes: any = result[0];
-    const fundmes: any = result[1];
-    const fanwalls: any = result[2];
+    const result: any = await Promise.all([daremeFunc, fundmeFunc, fanwallFunc, finishedDareme, finishedFundme])
+    const daremes: any = result[0]
+    const fundmes: any = result[1]
+    const fanwalls: any = result[2]
 
-    const users = <Array<any>>[];
+    const users = <Array<any>>[]
     for (const dareme of result[3]) {
       const filters = users.filter((user: any) => (user._id + '') === (dareme.owner._id + ''))
       if (filters.length === 0 && dareme.owner.role === 'USER') {
-        users.push(dareme.owner);
+        users.push(dareme.owner)
       }
     }
 
     for (const fundme of result[4]) {
       const filters = users.filter((user: any) => (user._id + '') === (fundme.owner._id + ''))
       if (filters.length === 0 && fundme.owner.role === 'USER') {
-        users.push(fundme.owner);
+        users.push(fundme.owner)
       }
     }
 
@@ -916,28 +887,31 @@ export const getDaremesOngoing = async (req: Request, res: Response) => {
     const result1 = await Promise.all(daremeFuncs);
     const result2 = await Promise.all(fundmeFuncs);
 
-    let index = 0;
+    let index = 0
     for (const dareme of daremes) {
-      let donuts = 0;
-      let fanwall = result1[index];
-      dareme.options.forEach((option: any) => { if (option.option.status === 1) donuts += option.option.donuts; });
+      let donuts = 0
+      let fanwall = result1[index]
+      dareme.options.forEach((option: any) => {
+        if (option.option.status === 1) {
+          donuts += option.option.donuts
+          if (option.requests) donuts = option.requests
+        }
+      })
+
       resItems.push({
         id: dareme._id,
-        type: 'dareme',
         owner: dareme.owner,
         title: dareme.title,
-        deadline: dareme.deadline,
-        category: dareme.category,
         teaser: dareme.teaser,
+        voters: 0,
         donuts: donuts,
-        finished: dareme.finished,
         sizeType: dareme.sizeType,
         cover: dareme.cover,
         date: dareme.date,
         fanwall: fanwall ? fanwall.posted : false,
-        time: (new Date(dareme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * dareme.deadline) / (24 * 3600 * 1000),
-      });
-      index++;
+        time: Math.round((new Date(dareme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * dareme.deadline) / 1000),
+      })
+      index++
     }
 
     index = 0;
@@ -945,20 +919,17 @@ export const getDaremesOngoing = async (req: Request, res: Response) => {
       let fanwall = result2[index];
       resItems.push({
         id: fundme._id,
-        type: 'fundme',
         goal: fundme.goal,
         owner: fundme.owner,
         title: fundme.title,
-        deadline: fundme.deadline,
-        category: fundme.category,
         teaser: fundme.teaser,
+        voters: fundme.voteInfo.length,
         donuts: fundme.wallet,
-        finished: fundme.finished,
         sizeType: fundme.sizeType,
         cover: fundme.cover,
         date: fundme.date,
         fanwall: fanwall ? fanwall.posted : false,
-        time: (new Date(fundme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * fundme.deadline) / (24 * 3600 * 1000),
+        time: Math.round((new Date(fundme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * fundme.deadline) / 1000),
       });
       index++;
     }
