@@ -617,77 +617,68 @@ export const deleteDareme = async (req: Request, res: Response) => {
 
 export const getDaremesByPersonalUrl = async (req: Request, res: Response) => {
   try {
-    const { url } = req.body;
-    let results: Array<object> = [];
-    const user: any = await User.findOne({ personalisedUrl: url }).select({ 'name': 1, 'avatar': 1, 'personalisedUrl': 1, 'categories': 1, 'subscribed_users': 1, 'tipFunction': 1 })
+    const { url } = req.body
+    let results: Array<object> = []
+    const user: any = await User.findOne({ personalisedUrl: url })
     const result: any = await Promise.all([
-      DareMe.find({ owner: user._id, published: true, show: true })
-        .populate({ path: 'owner', select: { 'name': 1, 'avatar': 1, 'personalisedUrl': 1, 'status': 1 } })
-        .populate({ path: 'options.option', select: { 'donuts': 1, '_id': 0, 'status': 1, 'voters': 1, 'voteInfo': 1, 'win': 1, 'requests': 1 } })
-        .select({ 'published': 0, 'wallet': 0, '__v': 0 }),
-      FundMe.find({ owner: user._id, published: true, show: true })
-        .populate({ path: 'owner', select: { 'name': 1, 'avatar': 1, 'personalisedUrl': 1, 'status': 1 } })
-        .select({ 'published': 0, '__v': 0 }),
-      DareMe.find({ published: true, show: true })
-        .where('owner').ne(user._id)
-        .populate({ path: 'owner', select: { 'name': 1, 'avatar': 1, 'personalisedUrl': 1 } })
-        .populate({ path: 'options.option', select: { 'donuts': 1, '_id': 0, 'writer': 1, 'status': 1, 'voteInfo': 1 } })
-        .select({ 'published': 0, 'wallet': 0, '__v': 0 }),
-      FundMe.find({ published: true, show: true })
-        .where('owner').ne(user._id)
-        .populate({ path: 'owner', select: { 'name': 1, 'avatar': 1, 'personalisedUrl': 1 } })
+      DareMe.find({ owner: user._id, published: true, show: true }).populate([{ path: 'owner' }, { path: 'options.option' }]),
+      FundMe.find({ owner: user._id, published: true, show: true }).populate({ path: 'owner' }),
+      DareMe.find({ published: true, show: true }).where('owner').ne(user._id).populate([{ path: 'owner' }, { path: 'options.option' }]),
+      FundMe.find({ published: true, show: true }).where('owner').ne(user._id).populate({ path: 'owner' })
     ])
 
     const userDaremes = result[0]
     const userFundmes = result[1]
-
-    const ongoings: Array<object> = [];
-    const finishes: Array<object> = [];
+    const ongoings: Array<object> = []
+    const finishes: Array<object> = []
 
     userDaremes.filter((userDareme: any) => userDareme.finished === false).forEach((dareme: any) => {
-      let donuts = 0;
-      dareme.options.forEach((option: any) => { if (option.option.status === 1) donuts += option.option.donuts; });
+      let donuts = 0
+      dareme.options.forEach((option: any) => {
+        if (option.option.status === 1) {
+          donuts += option.option.donuts
+          if (option.option.requests) donuts = option.option.requests
+        }
+      })
       ongoings.push({
-        _id: dareme._id,
+        id: dareme._id,
         owner: dareme.owner,
         title: dareme.title,
-        deadline: dareme.deadline,
-        category: dareme.category,
         teaser: dareme.teaser,
+        voters: dareme.voteInfo.length,
         donuts: donuts,
-        cover: dareme.cover,
-        sizeType: dareme.sizeType,
-        isUser: true,
         finished: dareme.finished,
-        time: (new Date(dareme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * dareme.deadline) / (24 * 3600 * 1000),
-        date: dareme.date
-      });
-    });
+        sizeType: dareme.sizeType,
+        cover: dareme.cover,
+        date: dareme.date,
+        time: Math.round((new Date(dareme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * dareme.deadline) / 1000),
+        isUser: true,
+      })
+    })
 
     userFundmes.filter((userFundme: any) => userFundme.finished === false).forEach((fundme: any) => {
       ongoings.push({
-        _id: fundme._id,
+        id: fundme._id,
+        goal: fundme.goal,
         owner: fundme.owner,
         title: fundme.title,
-        deadline: fundme.deadline,
-        category: fundme.category,
         teaser: fundme.teaser,
+        voters: fundme.voteInfo.length,
         donuts: fundme.wallet,
-        goal: fundme.goal,
-        cover: fundme.cover,
-        sizeType: fundme.sizeType,
-        isUser: true,
         finished: fundme.finished,
-        time: (new Date(fundme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * fundme.deadline) / (24 * 3600 * 1000),
-        date: fundme.date
-      });
-    });
+        sizeType: fundme.sizeType,
+        cover: fundme.cover,
+        date: fundme.date,
+        time: Math.round((new Date(fundme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * fundme.deadline) / 1000),
+        isUser: true,
+      })
+    })
 
     let voterCount = 0
     let earnings = 0
 
     userDaremes.filter((userDareme: any) => userDareme.finished === true).forEach((dareme: any) => {
-      let donuts = 0;
+      let donuts = 0
       dareme.options.forEach((option: any) => {
         if (option.option.status === 1) {
           if (option.option.win === true) earnings = earnings + option.option.donuts
@@ -697,21 +688,20 @@ export const getDaremesByPersonalUrl = async (req: Request, res: Response) => {
         }
       });
       finishes.push({
-        _id: dareme._id,
+        id: dareme._id,
         owner: dareme.owner,
         title: dareme.title,
-        deadline: dareme.deadline,
-        category: dareme.category,
         teaser: dareme.teaser,
+        voters: dareme.voteInfo.length,
         donuts: donuts,
-        cover: dareme.cover,
-        sizeType: dareme.sizeType,
-        isUser: true,
         finished: dareme.finished,
-        time: (new Date(dareme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * dareme.deadline) / (24 * 3600 * 1000),
-        date: dareme.date
-      });
-    });
+        sizeType: dareme.sizeType,
+        cover: dareme.cover,
+        date: dareme.date,
+        time: Math.round((new Date(dareme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * dareme.deadline) / 1000),
+        isUser: true,
+      })
+    })
 
     userFundmes.filter((userFundme: any) => userFundme.finished === true).forEach((fundme: any) => {
       if (fundme.voteInfo.length > 0) {
@@ -719,22 +709,21 @@ export const getDaremesByPersonalUrl = async (req: Request, res: Response) => {
         fundme.voteInfo.forEach((voter: any) => { if (voter.donuts > 1) voterCount++ })
       }
       finishes.push({
-        _id: fundme._id,
+        id: fundme._id,
+        goal: fundme.goal,
         owner: fundme.owner,
         title: fundme.title,
-        deadline: fundme.deadline,
-        category: fundme.category,
         teaser: fundme.teaser,
+        voters: fundme.voteInfo.length,
         donuts: fundme.wallet,
-        goal: fundme.goal,
-        cover: fundme.cover,
-        sizeType: fundme.sizeType,
-        isUser: true,
         finished: fundme.finished,
-        time: (new Date(fundme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * fundme.deadline) / (24 * 3600 * 1000),
-        date: fundme.date
-      });
-    });
+        sizeType: fundme.sizeType,
+        cover: fundme.cover,
+        date: fundme.date,
+        time: Math.round((new Date(fundme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * fundme.deadline) / 1000),
+        isUser: true,
+      })
+    })
 
     ongoings.sort((first: any, second: any) => { return new Date(first.date).getTime() > new Date(second.date).getTime() ? 1 : new Date(first.date).getTime() < new Date(second.date).getTime() ? -1 : 0; });
     finishes.sort((first: any, second: any) => { return new Date(first.date).getTime() > new Date(second.date).getTime() ? 1 : new Date(first.date).getTime() < new Date(second.date).getTime() ? -1 : 0; });
@@ -748,37 +737,41 @@ export const getDaremesByPersonalUrl = async (req: Request, res: Response) => {
       var isWriter = false;
       for (let i = 0; i < dareme.options.length; i++) {
         if ((dareme.options[i].option.writer + "") === (user._id + "") && dareme.options[i].option.status === 1) {
-          isWriter = true;
-          break;
+          isWriter = true
+          break
         }
         for (let j = 0; j < dareme.options[i].option.voteInfo.length; j++) {
           if ((dareme.options[i].option.voteInfo[j].voter + "") === (user._id + "")) {
-            isWriter = true;
-            break;
+            isWriter = true
+            break
           }
         }
-        if (isWriter) break;
+        if (isWriter) break
       }
       if (isWriter === true) {
-        let donuts = 0;
-        dareme.options.forEach((option: any) => { if (option.option.status === 1) donuts += option.option.donuts; });
+        let donuts = 0
+        dareme.options.forEach((option: any) => {
+          if (option.option.status === 1) {
+            donuts += option.option.donuts
+            if (option.option.requests) donuts += option.option.requests
+          }
+        })
         results.push({
-          _id: dareme._id,
+          id: dareme._id,
           owner: dareme.owner,
           title: dareme.title,
-          deadline: dareme.deadline,
-          category: dareme.category,
           teaser: dareme.teaser,
+          voters: dareme.voteInfo.length,
           donuts: donuts,
-          cover: dareme.cover,
-          sizeType: dareme.sizeType,
           finished: dareme.finished,
+          sizeType: dareme.sizeType,
+          cover: dareme.cover,
+          date: dareme.date,
+          time: Math.round((new Date(dareme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * dareme.deadline) / 1000),
           isUser: false,
-          time: (new Date(dareme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * dareme.deadline + 1000 * 60) / (24 * 3600 * 1000),
-          date: dareme.date
-        });
+        })
       }
-    });
+    })
 
     daredDaremes.filter((daredDareme: any) => daredDareme.finished === true).sort((first: any, second: any) => {
       return new Date(first.date).getTime() > new Date(second.date).getTime() ? 1 : new Date(first.date).getTime() < new Date(second.date).getTime() ? -1 : 0;
@@ -786,78 +779,77 @@ export const getDaremesByPersonalUrl = async (req: Request, res: Response) => {
       var isWriter = false;
       for (let i = 0; i < dareme.options.length; i++) {
         if ((dareme.options[i].option.writer + "") === (user._id + "") && dareme.options[i].option.status === 1) {
-          isWriter = true;
-          break;
+          isWriter = true
+          break
         }
         for (let j = 0; j < dareme.options[i].option.voteInfo.length; j++) {
           if ((dareme.options[i].option.voteInfo[j].voter + "") === (user._id + "")) {
-            isWriter = true;
-            break;
+            isWriter = true
+            break
           }
         }
-        if (isWriter) break;
+        if (isWriter) break
       }
       if (isWriter === true) {
-        let donuts = 0;
-        dareme.options.forEach((option: any) => { if (option.option.status === 1) donuts += option.option.donuts; });
+        let donuts = 0
+        dareme.options.forEach((option: any) => {
+          if (option.option.status === 1) {
+            donuts += option.option.donuts
+            if (option.option.requests) donuts += option.option.requests
+          }
+        })
         results.push({
-          _id: dareme._id,
+          id: dareme._id,
           owner: dareme.owner,
           title: dareme.title,
-          deadline: dareme.deadline,
-          category: dareme.category,
           teaser: dareme.teaser,
+          voters: dareme.voteInfo.length,
           donuts: donuts,
-          cover: dareme.cover,
-          sizeType: dareme.sizeType,
           finished: dareme.finished,
+          sizeType: dareme.sizeType,
+          cover: dareme.cover,
+          date: dareme.date,
+          time: Math.round((new Date(dareme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * dareme.deadline) / 1000),
           isUser: false,
-          time: (new Date(dareme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * dareme.deadline + 1000 * 60) / (24 * 3600 * 1000),
-          date: dareme.date
-        });
+        })
       }
-    });
+    })
 
     const fundedFundmes = result[3]
 
     fundedFundmes.sort((first: any, second: any) => {
       return new Date(first.date).getTime() > new Date(second.date).getTime() ? 1 : new Date(first.date).getTime() < new Date(second.date).getTime() ? -1 : 0;
     }).forEach((fundme: any) => {
-      let isWritter = false;
+      let isWritter = false
       for (let i = 0; i < fundme.voteInfo.length; i++) {
         if (fundme.voteInfo[i].voter + "" === user._id + "") {
-          isWritter = true;
-          break;
+          isWritter = true
+          break
         }
       }
       if (isWritter) {
-        let donuts = 0;
-        fundme.voteInfo.forEach((voter: any) => {
-          donuts += voter.donuts;
-        })
+        let donuts = 0
+        fundme.voteInfo.forEach((voter: any) => { donuts += voter.donuts })
         results.push({
-          _id: fundme._id,
+          id: fundme._id,
+          goal: fundme.goal,
           owner: fundme.owner,
           title: fundme.title,
-          deadline: fundme.deadline,
-          category: fundme.category,
           teaser: fundme.teaser,
-          donuts: donuts,
-          cover: fundme.cover,
-          sizeType: fundme.sizeType,
+          voters: fundme.voteInfo.length,
+          donuts: fundme.wallet,
           finished: fundme.finished,
+          sizeType: fundme.sizeType,
+          cover: fundme.cover,
+          date: fundme.date,
+          time: Math.round((new Date(fundme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * fundme.deadline) / 1000),
           isUser: false,
-          goal: fundme.goal,
-          time: (new Date(fundme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * fundme.deadline + 1000 * 60) / (24 * 3600 * 1000),
-          date: fundme.date
         })
       }
     })
 
-    return res.status(200).json({ daremes: results, user: user, voterCount: voterCount, earnings: earnings * 0.9 });
-  } catch (err) {
-    console.log(err);
-  }
+    return res.status(200).json({ daremes: results, user: user, voterCount: voterCount, earnings: earnings * 0.9 })
+  } catch (err) { console.log(err) }
 }
 
 export const getDaremesOngoing = async (req: Request, res: Response) => {
