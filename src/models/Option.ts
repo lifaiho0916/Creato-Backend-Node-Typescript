@@ -1,5 +1,5 @@
-import mongoose, { Schema } from 'mongoose';
-import User from './User';
+import mongoose, { Schema } from 'mongoose'
+import User from './User'
 
 const OptionSchema = new mongoose.Schema({
     writer: {

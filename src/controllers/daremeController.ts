@@ -81,12 +81,24 @@ export const dareCreator = async (req: Request, res: Response) => {
 
 export const acceptDareOption = async (req: Request, res: Response) => {
   try {
-    const { optionId } = req.body
-    await Option.findByIdAndUpdate(optionId, { status: 1 }, { new: true })
+    const { optionId, daremeId } = req.body
+    const result = await Promise.all([
+      DareMe.findById(daremeId),
+      Option.findById(optionId)
+    ])
+
+    const dareme: any = result[0]
+    const option: any = result[1]
+    let daremeVoteInfo = [...dareme.voterInfo]
+    let voterFilter = dareme.voterInfo.filter((vote: any) => (vote.voter + '') === (option.writer + ''))
+    if (voterFilter.length === 0) daremeVoteInfo.push({ voter: option.writer })
+
+    await Promise.all([
+      Option.findByIdAndUpdate(optionId, { status: 1 }, { new: true }),
+      DareMe.findByIdAndUpdate(daremeId, { voteInfo: daremeVoteInfo })
+    ])
     return res.status(200).json({ success: true })
-  } catch (err) {
-    console.log(err)
-  }
+  } catch (err) { console.log(err) }
 }
 
 export const declineDareOption = async (req: Request, res: Response) => {
@@ -853,7 +865,6 @@ export const getDaremesOngoing = async (req: Request, res: Response) => {
     const daremeFunc: any = DareMe.find({ published: true, show: true }).populate([{ path: 'owner' }, { path: 'options.option' }])
     const fundmeFunc: any = FundMe.find({ published: true, show: true }).populate({ path: 'owner' })
     const fanwallFunc: any = Fanwall.find({ posted: true }).populate([{ path: 'writer' }, { path: 'dareme', populate: { path: 'options.option' } }, { path: 'fundme' }])
-
     const finishedDareme = DareMe.find({ finished: true }).populate({ path: 'owner' })
     const finishedFundme = FundMe.find({ finished: true }).populate({ path: 'owner' })
 
@@ -865,27 +876,22 @@ export const getDaremesOngoing = async (req: Request, res: Response) => {
     const users = <Array<any>>[]
     for (const dareme of result[3]) {
       const filters = users.filter((user: any) => (user._id + '') === (dareme.owner._id + ''))
-      if (filters.length === 0 && dareme.owner.role === 'USER') {
-        users.push(dareme.owner)
-      }
+      if (filters.length === 0 && dareme.owner.role === 'USER') users.push(dareme.owner)
     }
-
     for (const fundme of result[4]) {
       const filters = users.filter((user: any) => (user._id + '') === (fundme.owner._id + ''))
-      if (filters.length === 0 && fundme.owner.role === 'USER') {
-        users.push(fundme.owner)
-      }
+      if (filters.length === 0 && fundme.owner.role === 'USER') users.push(fundme.owner)
     }
 
-    let resItems = <Array<any>>[];
-    let daremeFuncs = <Array<any>>[];
-    let fundmeFuncs = <Array<any>>[];
+    let resItems = <Array<any>>[]
+    let daremeFuncs = <Array<any>>[]
+    let fundmeFuncs = <Array<any>>[]
 
     for (const dareme of daremes) { daremeFuncs.push(Fanwall.findOne({ dareme: dareme._id })) }
     for (const fundme of fundmes) { fundmeFuncs.push(Fanwall.findOne({ fundme: fundme._id })) }
 
-    const result1 = await Promise.all(daremeFuncs);
-    const result2 = await Promise.all(fundmeFuncs);
+    const result1 = await Promise.all(daremeFuncs)
+    const result2 = await Promise.all(fundmeFuncs)
 
     let index = 0
     for (const dareme of daremes) {
@@ -903,8 +909,9 @@ export const getDaremesOngoing = async (req: Request, res: Response) => {
         owner: dareme.owner,
         title: dareme.title,
         teaser: dareme.teaser,
-        voters: 0,
+        voters: dareme.voteInfo.length,
         donuts: donuts,
+        finished: dareme.finished,
         sizeType: dareme.sizeType,
         cover: dareme.cover,
         date: dareme.date,
@@ -925,12 +932,13 @@ export const getDaremesOngoing = async (req: Request, res: Response) => {
         teaser: fundme.teaser,
         voters: fundme.voteInfo.length,
         donuts: fundme.wallet,
+        finished: fundme.finished,
         sizeType: fundme.sizeType,
         cover: fundme.cover,
         date: fundme.date,
         fanwall: fanwall ? fanwall.posted : false,
         time: Math.round((new Date(fundme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * fundme.deadline) / 1000),
-      });
+      })
       index++;
     }
 
@@ -1075,20 +1083,23 @@ export const getOptionDetails = async (req: Request, res: Response) => {
 
 export const supportCreator = async (req: Request, res: Response) => {
   try {
-    const { userId, daremeId, optionId, amount } = req.body;
+    const { userId, daremeId, optionId, amount } = req.body
     const result = await Promise.all([
       Option.findById(optionId),
       DareMe.findById(daremeId).populate({ path: 'owner' }),
       User.findById(userId)
-    ]);
+    ])
 
-    const option: any = result[0];
-    const dareme: any = result[1];
-    const user: any = result[2];
+    const option: any = result[0]
+    const dareme: any = result[1]
+    const user: any = result[2]
 
-    let voteInfo = option.voteInfo;
-    let totalDonuts = option.donuts + amount;
-    let totalVoters = option.voters;
+    let voteInfo = option.voteInfo
+    let totalDonuts = option.donuts + amount
+    let totalVoters = option.voters
+    let daremeVoteInfo = [...dareme.voterInfo]
+    let voterFilter = dareme.voterInfo.filter((vote: any) => (vote.voter + '') === (userId + ''))
+    if (voterFilter.length === 0) daremeVoteInfo.push({ voter: userId })
     let filters = voteInfo.filter((option: any) => (option.voter + "") === (userId + ""));
     if (filters.length) {
       voteInfo = voteInfo.map((option: any) => {
@@ -1118,17 +1129,12 @@ export const supportCreator = async (req: Request, res: Response) => {
     const daremeWallet = dareme.wallet + amount;
 
     const result1 = await Promise.all([
-      Option.findByIdAndUpdate(option._id, { donuts: totalDonuts, voters: totalVoters, voteInfo: voteInfo }, { new: true })
-        .select({ 'donuts': 1, 'title': 1 })
-        .populate({ path: 'writer', select: { 'avatar': 1, 'personalisedUrl': 1, 'name': 1, '_id': 0 } }),
-      DareMe.findByIdAndUpdate(daremeId, { wallet: daremeWallet }, { new: true })
-        .populate({ path: 'owner', select: { 'avatar': 1, 'personalisedUrl': 1, 'name': 1 } })
-        .populate({ path: 'options.option' })
-        .select({ 'teaser': 1, 'options': 1, 'title': 1, 'cover': 1, 'sizeType': 1, 'reward': 1 })
+      Option.findByIdAndUpdate(option._id, { donuts: totalDonuts, voters: totalVoters, voteInfo: voteInfo }, { new: true }).populate({ path: 'writer' }),
+      DareMe.findByIdAndUpdate(daremeId, { wallet: daremeWallet, voteInfo: daremeVoteInfo }, { new: true }).populate([{ path: 'owner' }, { path: 'options.option' }])
     ]);
 
-    const optionNew = result1[0];
-    const updatedDareme: any = result1[1];
+    const optionNew = result1[0]
+    const updatedDareme: any = result1[1]
 
     const resDareme = {
       _id: updatedDareme._id,
@@ -1139,16 +1145,16 @@ export const supportCreator = async (req: Request, res: Response) => {
       reward: updatedDareme.reward,
       sizeType: updatedDareme.sizeType,
       options: updatedDareme.options
-    };
+    }
 
-    const superfan = updatedDareme.reward ? updatedDareme.reward : 50;
+    const superfan = updatedDareme.reward ? updatedDareme.reward : 50
 
     if (amount < superfan) {
       let resUser = null
       if (amount === 1) {
         const adminWallet: any = await AdminWallet.findOne({ admin: "ADMIN" })
         const adminDonuts = adminWallet.wallet - 1
-        req.body.io.to("ADMIN").emit("wallet_change", adminDonuts);
+        req.body.io.to("ADMIN").emit("wallet_change", adminDonuts)
 
         const transaction = new AdminUserTransaction({
           description: 3,
