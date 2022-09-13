@@ -38,7 +38,7 @@ router.post('/exist_url', auth ,getExistURL);
 router.post('/userFromUrl', getUserFromUrl);
 router.get('/tip_state', auth, getTipState)
 router.post('/invite_friend', inviteFriend)
-router.post('/creators', auth, getCreatorsByCategory)
+router.post('/creators', getCreatorsByCategory)
 
 router.post('/users', auth, getUsersList);
 
