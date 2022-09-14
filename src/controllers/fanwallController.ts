@@ -465,25 +465,22 @@ export const getFanwallsByPersonalUrl = async (req: Request, res: Response) => {
     const user: any = await User.findOne({ personalisedUrl: url }).select({ 'name': 1, 'avatar': 1, 'personalisedUrl': 1, 'categories': 1, 'subscribed_users': 1, 'tipFunction': 1 });
 
     const result: any = await Promise.all([
-      DareMe.find({ owner: user._id, published: true, show: true })
-        .populate({ path: 'owner', select: { 'name': 1, 'avatar': 1, 'personalisedUrl': 1, 'status': 1 } })
-        .populate({ path: 'options.option', select: { 'donuts': 1, '_id': 0, 'status': 1, 'voters': 1, 'voteInfo': 1, 'win': 1, 'requests': 1 } })
-        .select({ 'published': 0, 'wallet': 0, '__v': 0 }),
-      FundMe.find({ owner: user._id, published: true, show: true })
-        .populate({ path: 'owner', select: { 'name': 1, 'avatar': 1, 'personalisedUrl': 1, 'status': 1 } })
-        .select({ 'published': 0, '__v': 0 }),
-      Fanwall.find({ posted: true }).where('owner').ne(user._id)
-        .populate({ path: 'writer', select: { 'avatar': 1, 'name': 1, 'personalisedUrl': 1 } })
-        .populate([{ path: 'dareme', model: DareMe, populate: [{ path: 'options.option', model: Option }, { path: 'owner', model: User }] },
-        { path: 'fundme', model: FundMe, populate: [{ path: 'owner', model: User }] }]),
-      Fanwall.find({ writer: user._id, posted: true })
-        .populate({ path: 'writer', select: { 'avatar': 1, 'name': 1, 'personalisedUrl': 1 } })
-        .populate([{ path: 'dareme', model: DareMe, populate: [{ path: 'options.option', model: Option }, { path: 'owner', model: User }] },
-        { path: 'fundme', model: FundMe, populate: [{ path: 'owner', model: User }] }]),
-      Tip.find({ user: user._id, show: true }).populate({ path: 'tipper', select: { 'avatar': 1, 'name': 1 } })
+      DareMe.find({ owner: user._id, published: true, show: true }).populate([{ path: 'owner' }, { path: 'options.option' }]),
+      FundMe.find({ owner: user._id, published: true, show: true }).populate({ path: 'owner' }),
+      Fanwall.find({ posted: true }).where('owner').ne(user._id).populate([
+        { path: 'writer' },
+        { path: 'dareme', populate: [{ path: 'options.option', }, { path: 'owner' }] },
+        { path: 'fundme', populate: [{ path: 'owner' }] }
+      ]),
+      Fanwall.find({ writer: user._id, posted: true }).populate([
+        { path: 'writer' },
+        { path: 'dareme', populate: [{ path: 'options.option' }, { path: 'owner' }] },
+        { path: 'fundme', populate: [{ path: 'owner' }] }
+      ]),
+      Tip.find({ user: user._id, show: true }).populate({ path: 'tipper' })
     ])
 
-    let voterCount = 0
+    let voters = <Array<any>>[]
     let earnings = 0
     const userDaremes = result[0]
     const userFundmes = result[1]
@@ -491,18 +488,16 @@ export const getFanwallsByPersonalUrl = async (req: Request, res: Response) => {
     userDaremes.filter((userDareme: any) => userDareme.finished === true).forEach((dareme: any) => {
       dareme.options.forEach((option: any) => {
         if (option.option.status === 1) {
-          if (option.option.win === true) earnings = earnings + option.option.donuts
-          if (option.option.requests) earnings = earnings + option.option.requests
-          option.option.voteInfo.forEach((voter: any) => { if (voter.donuts > 1) voterCount++ })
+          if (option.option.win) earnings += option.option.donuts
+          if (!option.option.win && option.option.requests) earnings += option.option.requests
+          option.option.voteInfo.forEach((vote: any) => { if (vote.superfan === true && voters.filter((voter: any) => (voter + '') === (vote.voter + '')).length === 0) voters.push(vote.voter) })
         }
       })
     })
 
     userFundmes.filter((userFundme: any) => userFundme.finished === true).forEach((fundme: any) => {
-      if (fundme.voteInfo.length > 0) {
-        earnings = earnings + fundme.wallet
-        fundme.voteInfo.forEach((voter: any) => { if (voter.donuts > 1) voterCount++ })
-      }
+      earnings = earnings + fundme.wallet
+      fundme.voteInfo.forEach((vote: any) => { if (vote.superfan === true && voters.filter((voter: any) => (voter + '') === (vote.voter + '')).length === 0) voters.push(vote.voter) })
     })
 
     const rewardFanwalls = result[2]
@@ -629,7 +624,7 @@ export const getFanwallsByPersonalUrl = async (req: Request, res: Response) => {
       return first.tip < second.tip ? 1 : first.tip > second.tip ? -1 :
         first.date > second.date ? -1 : first.date < second.date ? 1 : 0;
     });
-    return res.status(200).json({ success: true, fanwalls: resFanwalls, tips: resultTips, user: user, voterCount: voterCount, earnings: earnings * 0.9 });
+    return res.status(200).json({ success: true, fanwalls: resFanwalls, tips: resultTips, user: user, voterCount: voters.length, earnings: earnings * 0.9 });
   } catch (err) {
     console.log(err);
   }
