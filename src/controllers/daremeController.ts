@@ -875,112 +875,127 @@ export const getDaremesOngoing = async (req: Request, res: Response) => {
       if (filters.length === 0 && fundme.owner.role === 'USER') users.push(fundme.owner)
     }
 
-    let resItems = <Array<any>>[]
     let daremeFuncs = <Array<any>>[]
     let fundmeFuncs = <Array<any>>[]
-
     for (const dareme of daremes) { daremeFuncs.push(Fanwall.findOne({ dareme: dareme._id })) }
     for (const fundme of fundmes) { fundmeFuncs.push(Fanwall.findOne({ fundme: fundme._id })) }
-
     const result1 = await Promise.all(daremeFuncs)
     const result2 = await Promise.all(fundmeFuncs)
+
+    let daremeItems = <Array<any>>[]
+    let fundmeItems = <Array<any>>[]
+    let ongoingItems = <Array<any>>[]
+    let finishedItems = <Array<any>>[]
 
     let index = 0
     for (const dareme of daremes) {
       let donuts = 0
       let fanwall = result1[index]
-      dareme.options.forEach((option: any) => {
-        if (option.option.status === 1) {
-          donuts += option.option.donuts
-          if (option.option.requests) donuts = option.option.requests
-        }
-      })
-      resItems.push({
+      dareme.options.forEach((option: any) => { if (option.option.status === 1) donuts += option.option.donuts })
+
+      let item = {
         ...dareme._doc,
         donuts: donuts,
         fanwall: fanwall ? fanwall.posted : false,
-        time: Math.round((new Date(dareme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * dareme.deadline) / 1000),
-      })
+        time: Math.round((new Date(dareme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * dareme.deadline) / 1000)
+      }
+
+      if (dareme.finished) finishedItems.push(item)
+      else ongoingItems.push(item)
       index++
     }
 
-    index = 0;
+    const newArrDm = ongoingItems.slice()
+    for (let i = newArrDm.length - 1; i > 0; i--) {
+      const rand = Math.floor(Math.random() * (i + 1))
+      const temp = newArrDm[i]
+      newArrDm[i] = newArrDm[rand]
+      newArrDm[rand] = temp
+    }
+
+    const newArrDm1 = finishedItems.slice()
+    for (let i = newArrDm1.length - 1; i > 0; i--) {
+      const rand = Math.floor(Math.random() * (i + 1))
+      const temp = newArrDm1[i]
+      newArrDm1[i] = newArrDm1[rand]
+      newArrDm1[rand] = temp
+    }
+    daremeItems = newArrDm.concat(newArrDm1)
+
+    index = 0
+    ongoingItems = []
+    finishedItems = []
     for (const fundme of fundmes) {
       let fanwall = result2[index];
-      resItems.push({
+      let item = {
         ...fundme._doc,
         donuts: fundme.wallet,
         fanwall: fanwall ? fanwall.posted : false,
-        time: Math.round((new Date(fundme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * fundme.deadline) / 1000),
-      })
-      index++;
+        time: Math.round((new Date(fundme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * fundme.deadline) / 1000)
+      }
+
+      if (fundme.finished) finishedItems.push(item)
+      else ongoingItems.push(item)
+      index++
     }
 
-    let resFanwalls = <Array<any>>[];
-    fanwalls.sort((first: any, second: any) => {
-      return first.date < second.date ? 1 : first.date > second.date ? -1 : 0;
-    }).forEach((fanwall: any) => {
-      let totalDonuts = 0;
+    const newArrFm = ongoingItems.slice()
+    for (let i = newArrFm.length - 1; i > 0; i--) {
+      const rand = Math.floor(Math.random() * (i + 1))
+      const temp = newArrFm[i]
+      newArrFm[i] = newArrFm[rand]
+      newArrFm[rand] = temp
+    }
+
+    const newArrFm1 = finishedItems.slice()
+    for (let i = newArrFm1.length - 1; i > 0; i--) {
+      const rand = Math.floor(Math.random() * (i + 1))
+      const temp = newArrFm1[i]
+      newArrFm[i] = newArrFm1[rand]
+      newArrFm1[rand] = temp
+    }
+    fundmeItems = newArrFm.concat(newArrFm1)
+
+    let resFanwalls = <Array<any>>[]
+    fanwalls.forEach((fanwall: any) => {
+      let totalDonuts = 0
       if (fanwall.dareme) {
-        fanwall.dareme.options.forEach((option: any) => { if (option.option.status === 1) totalDonuts += option.option.donuts; });
+        fanwall.dareme.options.forEach((option: any) => { if (option.option.status === 1) totalDonuts += option.option.donuts })
         resFanwalls.push({
-          id: fanwall._id,
-          date: fanwall.date,
-          writer: fanwall.writer,
-          video: fanwall.video,
-          sizeType: fanwall.sizeType,
-          cover: fanwall.cover,
-          message: fanwall.message,
-          embedUrl: fanwall.embedUrl,
-          unlocks: fanwall.unlocks,
-          dareme: {
-            title: fanwall.dareme.title,
-            options: fanwall.dareme.options,
-            category: fanwall.dareme.category,
+          ...fanwall._doc,
+          dareme: null,
+          item: {
+            ...fanwall.dareme._doc,
             donuts: totalDonuts,
-            reward: fanwall.dareme.reward,
           }
-        });
+        })
       } else {
         resFanwalls.push({
-          id: fanwall._id,
-          date: fanwall.date,
-          writer: fanwall.writer,
-          video: fanwall.video,
-          sizeType: fanwall.sizeType,
-          cover: fanwall.cover,
-          message: fanwall.message,
-          embedUrl: fanwall.embedUrl,
-          unlocks: fanwall.unlocks,
-          dareme: {
-            goal: fanwall.fundme.goal,
-            title: fanwall.fundme.title,
-            category: fanwall.fundme.category,
-            donuts: fanwall.fundme.wallet,
-            options: null,
-            voteInfo: fanwall.fundme.voteInfo,
-            reward: fanwall.fundme.reward
-          }
-        });
+          ...fanwall._doc,
+          fundme: null,
+          item: { ...fanwall.fundme._doc }
+        })
       }
-    });
+    })
 
-    const newArr = resItems.slice()
-    for (let i = newArr.length - 1; i > 0; i--) {
-      const rand = Math.floor(Math.random() * (i + 1));
-      [newArr[i], newArr[rand]] = [newArr[rand], newArr[i]];
+    const newArrUser = users.slice()
+    for (let i = newArrUser.length - 1; i > 0; i--) {
+      const rand = Math.floor(Math.random() * (i + 1))
+      const temp = newArrUser[i]
+      newArrUser[i] = newArrUser[rand]
+      newArrUser[rand] = temp
     }
 
-    const newArr1 = users.slice()
-    for (let i = newArr1.length - 1; i > 0; i--) {
-      const rand = Math.floor(Math.random() * (i + 1));
-      [newArr1[i], newArr1[rand]] = [newArr1[rand], newArr1[i]];
+    const newArrFan = resFanwalls.slice()
+    for (let i = newArrFan.length - 1; i > 0; i--) {
+      const rand = Math.floor(Math.random() * (i + 1))
+      const temp = newArrFan[i]
+      newArrFan[i] = newArrFan[rand]
+      newArrFan[rand] = temp
     }
 
-    return res.status(200).json({ success: true, daremes: newArr, fanwalls: resFanwalls, users: newArr1 });
-  } catch (err) {
-    console.log(err);
-  }
+    return res.status(200).json({ success: true, payload: { daremes: daremeItems, fundmes: fundmeItems, fanwalls: newArrFan, users: newArrUser } })
+  } catch (err) { console.log(err) }
 }
 
 export const getOptionsFromUserId = async (req: Request, res: Response) => {

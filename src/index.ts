@@ -62,22 +62,26 @@ app.use(express.static("public"))
 
 server.listen(PORT, async () => {
   console.log(`The Server is up and running on PORT ${PORT}`)
-  // const daremes: any = await DareMe.find().populate({ path: 'options.option' })
-  // for (const dareme of daremes) {
-  //   let voteInfo: Array<any> = []
-  //   const options = dareme.options
-  //   for (const option of options) {
-  //     if (option.option.status === 1) {
-  //       let filters = voteInfo.filter((vote: any) => (vote.voter + '') === (option.option.writer + ''))
-  //       if (filters.length === 0) voteInfo.push({ voter: option.option.writer })
-  //       for (const vote of option.option.voteInfo) {
-  //         let filters = voteInfo.filter((vote1: any) => (vote1.voter + '') === (vote.voter + ''))
-  //         if (filters.length === 0) voteInfo.push({ voter: vote.voter })
-  //       }
-  //     }
-  //   }
-  //   await DareMe.findByIdAndUpdate(dareme.id, { voteInfo: voteInfo })
-  // }
+  const daremes: any = await DareMe.find().populate({ path: 'options.option' })
+  for (const dareme of daremes) {
+    let voteInfo: Array<any> = []
+    const options = dareme.options
+    let index = 0
+    for (const option of options) {
+      if (option.option.status === 1) {
+        if (index > 1) {
+          let filters = voteInfo.filter((vote: any) => (vote.voter + '') === (option.option.writer + ''))
+          if (filters.length === 0) voteInfo.push({ voter: option.option.writer })
+        }
+        for (const vote of option.option.voteInfo) {
+          let filters = voteInfo.filter((vote1: any) => (vote1.voter + '') === (vote.voter + ''))
+          if (filters.length === 0) voteInfo.push({ voter: vote.voter })
+        }
+      }
+      index++
+    }
+    await DareMe.findByIdAndUpdate(dareme.id, { voteInfo: voteInfo })
+  }
 })
 
 cron.schedule("*/10 * * * * *", () => checkOngoingdaremes(io))
