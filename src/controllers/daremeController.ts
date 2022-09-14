@@ -921,7 +921,7 @@ export const getDaremesOngoing = async (req: Request, res: Response) => {
     for (let i = newArrFm1.length - 1; i > 0; i--) {
       const rand = Math.floor(Math.random() * (i + 1))
       const temp = newArrFm1[i]
-      newArrFm[i] = newArrFm1[rand]
+      newArrFm1[i] = newArrFm1[rand]
       newArrFm1[rand] = temp
     }
     fundmeItems = newArrFm.concat(newArrFm1)
