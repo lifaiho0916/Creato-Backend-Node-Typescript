@@ -16,7 +16,7 @@ import {
     acceptDareOption,
     winDareOption,
     checkDareMeFinished,
-    getDaremeDetails,
+    getDareMeDetails,
     getDaremeResult,
     getOptionDetails,
     getDareCreatorDetails,
@@ -44,7 +44,7 @@ router.post('/save/cover', auth, selectCover);
 router.get('/ongoingDaremes', getDaremesOngoing);
 router.post('/personalUrl', getDaremesByPersonalUrl);
 router.get('/check/finished/:daremeId', checkDareMeFinished);
-router.get('/details/:daremeId', getDaremeDetails);
+router.get('/details/:daremeId', getDareMeDetails)
 router.get('/result/:daremeId', getDaremeResult);
 router.get('/:daremeId/details/:optionId', getOptionDetails);
 router.post('/support', auth, supportCreator);

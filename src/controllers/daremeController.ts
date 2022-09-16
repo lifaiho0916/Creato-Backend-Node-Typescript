@@ -135,27 +135,22 @@ export const declineDareOption = async (req: Request, res: Response) => {
   }
 }
 
-export const getDaremeDetails = async (req: Request, res: Response) => {
+export const getDareMeDetails = async (req: Request, res: Response) => {
   try {
     const { daremeId } = req.params
     const dareme: any = await DareMe.findById(daremeId).populate([{ path: 'owner' }, { path: 'options.option', populate: { path: 'writer' } }])
 
-    if (dareme) {
-      let donuts = 0
-      dareme.options.forEach((option: any) => {
-        if (option.option.status === 1) {
-          donuts += option.option.donuts
-          if (option.option.requests) donuts += option.option.requests
-        }
-      })
-      const result = {
-        ...dareme._doc,
-        donuts: donuts,
-        time: (new Date(dareme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * dareme.deadline + 1000 * 60) / (24 * 3600 * 1000)
-      }
-
-      return res.status(200).json({ success: true, dareme: result })
+    let donuts = 0
+    dareme.options.forEach((option: any) => { if (option.option.status === 1) donuts += option.option.donuts })
+    const result = {
+      ...dareme._doc,
+      donuts: donuts,
+      time: (new Date(dareme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * dareme.deadline + 1000 * 60) / 1000
     }
+    return res.status(200).json({ 
+      success: true,
+      payload: { dareme: result }
+    })
   } catch (err) { console.log(err) }
 }
 
