@@ -89,8 +89,8 @@ export const acceptDareOption = async (req: Request, res: Response) => {
 
     const dareme: any = result[0]
     const option: any = result[1]
-    let daremeVoteInfo = [...dareme.voterInfo]
-    let voterFilter = dareme.voterInfo.filter((vote: any) => (vote.voter + '') === (option.writer + ''))
+    let daremeVoteInfo = [...dareme.voteInfo]
+    let voterFilter = dareme.voteInfo.filter((vote: any) => (vote.voter + '') === (option.writer + ''))
     if (voterFilter.length === 0) daremeVoteInfo.push({ voter: option.writer })
 
     await Promise.all([
@@ -158,6 +158,114 @@ export const getDareMeDetails = async (req: Request, res: Response) => {
       success: true,
       payload: { dareme: result }
     })
+  } catch (err) { console.log(err) }
+}
+
+export const supportCreator = async (req: Request, res: Response) => {
+  try {
+    const { userId, daremeId, optionId, amount } = req.body
+    const result = await Promise.all([
+      Option.findById(optionId),
+      DareMe.findById(daremeId).populate({ path: 'owner' }),
+      User.findById(userId)
+    ])
+
+    const option: any = result[0]
+    const dareme: any = result[1]
+    const user: any = result[2]
+
+    let voteInfo = option.voteInfo
+    let totalDonuts = option.donuts + amount
+    let totalVoters = option.voters
+    let daremeVoteInfo = [...dareme.voteInfo]
+    let voterFilter = dareme.voteInfo.filter((vote: any) => (vote.voter + '') === (userId + ''))
+    if (voterFilter.length === 0) daremeVoteInfo.push({ voter: userId })
+
+    let filters = voteInfo.filter((option: any) => (option.voter + "") === (userId + ""));
+    if (filters.length) {
+      voteInfo = voteInfo.map((option: any) => {
+        if ((option.voter + "") === (userId + "")) {
+          option.donuts = option.donuts + amount
+          if (amount >= dareme.reward) option.superfan = true
+        }
+        return option
+      })
+    } else {
+      totalVoters = totalVoters + 1
+      voteInfo.push({
+        voter: userId,
+        donuts: amount,
+        superfan: amount >= dareme.reward ? true : false
+      })
+    }
+    const daremeWallet = dareme.wallet + amount
+
+    await Option.findByIdAndUpdate(option._id, { donuts: totalDonuts, voters: totalVoters, voteInfo: voteInfo }, { new: true }).populate({ path: 'writer' })
+    const updatedDareme: any = await DareMe.findByIdAndUpdate(daremeId, { wallet: daremeWallet, voteInfo: daremeVoteInfo }, { new: true }).populate([{ path: 'owner' }, { path: 'options.option', populate: { path: 'writer' } }])
+
+    let donuts = 0
+    let options: Array<any> = []
+    updatedDareme.options.forEach((option: any) => {
+      if (option.option.status === 1) {
+        donuts += option.option.donuts
+        options.push({ option: option.option })
+      }
+    })
+    const resDareme = {
+      ...updatedDareme._doc,
+      donuts: donuts,
+      options: options,
+      time: (new Date(dareme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * dareme.deadline + 1000 * 60) / 1000
+    }
+
+    let wallet = user.wallet - amount
+    const updatedUser: any = await User.findByIdAndUpdate(userId, { wallet: wallet }, { new: true })
+    const resUser = { ...updatedUser._doc, id: updatedUser._id}
+    
+    req.body.io.to(updatedUser.email).emit("wallet_change", updatedUser.wallet)
+
+    if (amount < dareme.reward) {
+      const transaction = new AdminUserTransaction({
+        description: 11,
+        from: "USER",
+        to: "DAREME",
+        user: userId,
+        dareme: daremeId,
+        donuts: amount,
+        date: calcTime()
+      })
+
+      await transaction.save()
+      addNewNotification(req.body.io, {
+        section: 'Ongoing DareMe',
+        trigger: 'After voter voted in DareMe (non-Superfans)',
+        dareme: updatedDareme,
+        option: option,
+        voterId: userId,
+        donuts: amount
+      })
+    } else {
+      const transaction = new AdminUserTransaction({
+        description: 5,
+        from: "USER",
+        to: "DAREME",
+        user: userId,
+        dareme: daremeId,
+        donuts: amount,
+        date: calcTime()
+      })
+      await transaction.save()
+
+      addNewNotification(req.body.io, {
+        section: 'Ongoing DareMe',
+        trigger: 'After voter voted in DareMe (Superfans)',
+        dareme: updatedDareme,
+        option: option,
+        voterId: userId,
+        donuts: amount
+      })
+    }
+    return res.status(200).json({ success: true, payload: { dareme: resDareme, user: resUser } })
   } catch (err) { console.log(err) }
 }
 
@@ -928,179 +1036,6 @@ export const getOptionsFromUserId = async (req: Request, res: Response) => {
 
   } catch (e) {
     console.log(e);
-  }
-}
-
-export const supportCreator = async (req: Request, res: Response) => {
-  try {
-    const { userId, daremeId, optionId, amount } = req.body
-    const result = await Promise.all([
-      Option.findById(optionId),
-      DareMe.findById(daremeId).populate({ path: 'owner' }),
-      User.findById(userId)
-    ])
-
-    const option: any = result[0]
-    const dareme: any = result[1]
-    const user: any = result[2]
-
-    let voteInfo = option.voteInfo
-    let totalDonuts = option.donuts + amount
-    let totalVoters = option.voters
-    let daremeVoteInfo = [...dareme.voterInfo]
-    let voterFilter = dareme.voterInfo.filter((vote: any) => (vote.voter + '') === (userId + ''))
-    if (voterFilter.length === 0) daremeVoteInfo.push({ voter: userId })
-    let filters = voteInfo.filter((option: any) => (option.voter + "") === (userId + ""));
-    if (filters.length) {
-      voteInfo = voteInfo.map((option: any) => {
-        if ((option.voter + "") === (userId + "")) {
-          if (amount > 1) {
-            option.donuts = option.donuts + amount;
-            if (dareme.reward) {
-              if (amount >= dareme.reward)
-                option.superfan = true;
-            } else {
-              if (amount === 50) option.superfan = true;
-            }
-          } else option.canFree = false;
-        }
-        return option;
-      });
-    } else {
-      totalVoters = totalVoters + 1;
-      voteInfo.push({
-        voter: userId,
-        donuts: amount > 1 ? amount : 0,
-        canFree: amount === 1 ? false : true,
-        superfan: dareme.reward ? amount >= dareme.reward ? true : false
-          : amount >= 50 ? true : false
-      });
-    }
-    const daremeWallet = dareme.wallet + amount;
-
-    const result1 = await Promise.all([
-      Option.findByIdAndUpdate(option._id, { donuts: totalDonuts, voters: totalVoters, voteInfo: voteInfo }, { new: true }).populate({ path: 'writer' }),
-      DareMe.findByIdAndUpdate(daremeId, { wallet: daremeWallet, voteInfo: daremeVoteInfo }, { new: true }).populate([{ path: 'owner' }, { path: 'options.option' }])
-    ]);
-
-    const optionNew = result1[0]
-    const updatedDareme: any = result1[1]
-
-    const resDareme = {
-      _id: updatedDareme._id,
-      owner: updatedDareme.owner,
-      teaser: updatedDareme.teaser,
-      title: updatedDareme.title,
-      cover: updatedDareme.cover,
-      reward: updatedDareme.reward,
-      sizeType: updatedDareme.sizeType,
-      options: updatedDareme.options
-    }
-
-    const superfan = updatedDareme.reward ? updatedDareme.reward : 50
-
-    if (amount < superfan) {
-      let resUser = null
-      if (amount === 1) {
-        const adminWallet: any = await AdminWallet.findOne({ admin: "ADMIN" })
-        const adminDonuts = adminWallet.wallet - 1
-        req.body.io.to("ADMIN").emit("wallet_change", adminDonuts)
-
-        const transaction = new AdminUserTransaction({
-          description: 3,
-          from: "ADMIN",
-          to: "DAREME",
-          user: userId,
-          dareme: daremeId,
-          donuts: 1,
-          date: calcTime()
-        })
-
-        await Promise.all([
-          AdminWallet.findOneAndUpdate({ admin: "ADMIN" }, { wallet: adminDonuts }),
-          transaction.save()
-        ])
-      } else {
-        let wallet = user.wallet - amount;
-        const updatedUser: any = await User.findByIdAndUpdate(userId, { wallet: wallet }, { new: true });
-        const payload = {
-          id: updatedUser._id,
-          name: updatedUser.name,
-          avatar: updatedUser.avatar,
-          role: updatedUser.role,
-          email: updatedUser.email,
-          wallet: updatedUser.wallet,
-          personalisedUrl: updatedUser.personalisedUrl,
-          language: updatedUser.language,
-          category: updatedUser.categories,
-          new_notification: updatedUser.new_notification,
-        };
-        req.body.io.to(updatedUser.email).emit("wallet_change", updatedUser.wallet);
-        resUser = payload
-
-        const transaction = new AdminUserTransaction({
-          description: 11,
-          from: "USER",
-          to: "DAREME",
-          user: userId,
-          dareme: daremeId,
-          donuts: amount,
-          date: calcTime()
-        })
-
-        await transaction.save()
-      }
-
-      addNewNotification(req.body.io, {
-        section: 'Ongoing DareMe',
-        trigger: 'After voter voted in DareMe (non-Superfans)',
-        dareme: updatedDareme,
-        option: option,
-        voterId: userId,
-        donuts: amount
-      });
-      return res.status(200).json({ success: true, dareme: resDareme, option: optionNew, user: resUser });
-    } else {
-      let wallet = user.wallet - amount;
-      const updatedUser: any = await User.findByIdAndUpdate(userId, { wallet: wallet }, { new: true });
-      const payload = {
-        id: updatedUser._id,
-        name: updatedUser.name,
-        avatar: updatedUser.avatar,
-        role: updatedUser.role,
-        email: updatedUser.email,
-        wallet: updatedUser.wallet,
-        personalisedUrl: updatedUser.personalisedUrl,
-        language: updatedUser.language,
-        category: updatedUser.categories,
-        new_notification: updatedUser.new_notification,
-      };
-      req.body.io.to(updatedUser.email).emit("wallet_change", updatedUser.wallet);
-
-      const transaction = new AdminUserTransaction({
-        description: 5,
-        from: "USER",
-        to: "DAREME",
-        user: userId,
-        dareme: daremeId,
-        donuts: amount,
-        date: calcTime()
-      });
-      await transaction.save();
-
-      addNewNotification(req.body.io, {
-        section: 'Ongoing DareMe',
-        trigger: 'After voter voted in DareMe (Superfans)',
-        dareme: updatedDareme,
-        option: option,
-        voterId: userId,
-        donuts: amount
-      });
-
-      return res.status(200).json({ success: true, dareme: resDareme, option: optionNew, user: payload });
-    }
-  } catch (err) {
-    console.log(err);
   }
 }
 
