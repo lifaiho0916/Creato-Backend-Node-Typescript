@@ -18,7 +18,6 @@ import {
     checkDareMeFinished,
     getDareMeDetails,
     getDaremeResult,
-    getOptionDetails,
     getDareCreatorDetails,
     checkDareMeRequests,
     getDareMeRequests,
@@ -46,7 +45,6 @@ router.post('/personalUrl', getDaremesByPersonalUrl);
 router.get('/check/finished/:daremeId', checkDareMeFinished);
 router.get('/details/:daremeId', getDareMeDetails)
 router.get('/result/:daremeId', getDaremeResult);
-router.get('/:daremeId/details/:optionId', getOptionDetails);
 router.post('/support', auth, supportCreator);
 router.get('/dare/:daremeId', getDareCreatorDetails);
 router.post('/dare/creator', auth, dareCreator);

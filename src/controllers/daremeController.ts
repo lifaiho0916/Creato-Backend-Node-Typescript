@@ -141,13 +141,20 @@ export const getDareMeDetails = async (req: Request, res: Response) => {
     const dareme: any = await DareMe.findById(daremeId).populate([{ path: 'owner' }, { path: 'options.option', populate: { path: 'writer' } }])
 
     let donuts = 0
-    dareme.options.forEach((option: any) => { if (option.option.status === 1) donuts += option.option.donuts })
+    let options: Array<any> = []
+    dareme.options.forEach((option: any) => {
+      if (option.option.status === 1) {
+        donuts += option.option.donuts
+        options.push({ option: option.option })
+      }
+    })
     const result = {
       ...dareme._doc,
       donuts: donuts,
+      options: options,
       time: (new Date(dareme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * dareme.deadline + 1000 * 60) / 1000
     }
-    return res.status(200).json({ 
+    return res.status(200).json({
       success: true,
       payload: { dareme: result }
     })
@@ -921,32 +928,6 @@ export const getOptionsFromUserId = async (req: Request, res: Response) => {
 
   } catch (e) {
     console.log(e);
-  }
-}
-
-export const getOptionDetails = async (req: Request, res: Response) => {
-  try {
-    const { optionId, daremeId } = req.params;
-    const dareme: any = await DareMe.findById(daremeId)
-      .populate({ path: 'owner', select: { 'avatar': 1, 'personalisedUrl': 1, 'name': 1 } })
-      .populate({ path: 'options.option' })
-      .select({ 'teaser': 1, 'options': 1, 'title': 1, 'cover': 1, 'sizeType': 1, 'reward': 1, 'rewardText': 1 });
-    const resDareme = {
-      _id: dareme._id,
-      owner: dareme.owner,
-      teaser: dareme.teaser,
-      title: dareme.title,
-      cover: dareme.cover,
-      reward: dareme.reward,
-      sizeType: dareme.sizeType,
-      options: dareme.options
-    };
-    const option = await Option.findById(optionId)
-      .select({ 'donuts': 1, 'title': 1 })
-      .populate({ path: 'writer', select: { 'avatar': 1, 'personalisedUrl': 1, 'name': 1, '_id': 0 } });
-    if (option) return res.status(200).json({ option: option, dareme: resDareme, success: true });
-  } catch (err) {
-    console.log(err);
   }
 }
 
