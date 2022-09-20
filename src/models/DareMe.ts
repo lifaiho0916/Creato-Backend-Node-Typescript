@@ -39,6 +39,20 @@ const DareMeSchema = new monogoose.Schema({
     voter: {
       type: Schema.Types.ObjectId,
       ref: User
+    },
+    donuts: {
+      type: Number,
+      required: true
+    },
+    canFree: {
+      type: Boolean,
+      default: true
+    },
+    superfan: {
+      type: Boolean
+    },
+    transfer: {
+      type: Boolean
     }
   }],
   wallet: {

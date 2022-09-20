@@ -65,39 +65,48 @@ app.use(express.static("public"))
 server.listen(PORT, async () => {
   const daremes: any = await DareMe.find().populate({ path: 'options.option' })
   for (const dareme of daremes) {
-    ///----------------- VoteInfo superfan setting--------------------
+    let voteInfo: Array<any> = []
     const options = dareme.options
+    let index = 0
     for (const option of options) {
-      let voteInfo: Array<any> = []
       if (option.option.status === 1) {
+        if (index > 1) {
+          let filters = voteInfo.filter((vote: any) => (vote.voter + '') === (option.option.writer + ''))
+          if (filters.length === 0) {
+            voteInfo.push({ 
+              voter: option.option.writer,
+              donuts: option.option.requests ? option.option.requests : 0,
+              canFree: true,
+              superfan: false,
+              transfer: false,
+            })
+          } else {
+            let index = voteInfo.findIndex((vote: any) => (vote.voter + '') === (option.option.writer + ''))
+            voteInfo[index].donuts += option.option.requests ? option.option.requests : 0
+          }
+        }
         for (const vote of option.option.voteInfo) {
-          const voteTemp = vote
-          if (vote.donuts >= dareme.reward) voteTemp.superfan = true
-          else voteTemp.superfan = false
-          voteInfo.push(voteTemp)
+          let filters = voteInfo.filter((vote1: any) => (vote1.voter + '') === (vote.voter + ''))
+          if (filters.length === 0) {
+            voteInfo.push({ 
+              voter: vote.voter,
+              donuts: vote.donuts,
+              canFree: vote.canFree,
+              superfan: vote.superfan,
+              transfer: vote.transfer
+            })
+          } else {
+            let index = voteInfo.findIndex((vote1: any) => (vote1.voter + '') === (vote.voter + ''))
+            voteInfo[index].donuts += vote.donuts
+            if(vote.canFree === false) voteInfo[index].canFree = false
+            if(vote.superfan === true) voteInfo[index].superfan = true
+            if(vote.transfer === true) voteInfo[index].transfer = true
+          }
         }
       }
-      await Option.findByIdAndUpdate(option.option._id, { voteInfo: voteInfo })
+      index++
     }
-
-    //--------------------- VoteInfo Set ----------------------------
-    // let voteInfo: Array<any> = []
-    // const options = dareme.options
-    // let index = 0
-    // for (const option of options) {
-    //   if (option.option.status === 1) {
-    //     if (index > 1) {
-    //       let filters = voteInfo.filter((vote: any) => (vote.voter + '') === (option.option.writer + ''))
-    //       if (filters.length === 0) voteInfo.push({ voter: option.option.writer })
-    //     }
-    //     for (const vote of option.option.voteInfo) {
-    //       let filters = voteInfo.filter((vote1: any) => (vote1.voter + '') === (vote.voter + ''))
-    //       if (filters.length === 0) voteInfo.push({ voter: vote.voter })
-    //     }
-    //   }
-    //   index++
-    // }
-    // await DareMe.findByIdAndUpdate(dareme.id, { voteInfo: voteInfo })
+    await DareMe.findByIdAndUpdate(dareme.id, { voteInfo: voteInfo })
   }
   console.log(`The Server is up and running on PORT ${PORT}`)
 })

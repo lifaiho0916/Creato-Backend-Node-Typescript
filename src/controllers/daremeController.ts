@@ -366,7 +366,7 @@ export const getDaremeVoters = async (req: Request, res: Response) => {
           if ((option.option.writer._id + '') === (vote.voter._id + '')) {
             writerIsVoter = true
             let voteTemp = vote
-            voteTemp.donuts += option.option.requests
+            voteTemp.donuts += option.option.requests ? option.option.requests : 0
             votes.push(voteTemp)
           } else votes.push(vote)
         })
@@ -399,9 +399,9 @@ export const checkRefundPossible = async (req: Request, res: Response) => {
     if (dareme.fanwall) return res.status(200).json({ success: true, refund: false })
 
     let refund = true
-    dareme.options.forEach((option: any) => {
-      option.option.voteInfo.forEach((vote: any) => { if ((vote.voter + '') === (userId + '') && vote.transfer && vote.transfer === true) refund = false })
-    })
+    const filters = dareme.voteInfo.filter((vote: any) => (vote.voter + "") === (userId + ""))
+    if (filters[0].transfer === true) refund = false
+    else refund = true
 
     return res.status(200).json({ success: true, refund: refund })
   } catch (err) {
@@ -416,30 +416,16 @@ export const refundDonuts = async (req: Request, res: Response) => {
 
     const results = await Promise.all([
       User.findById(userId),
-      DareMe.findById(daremeId).populate({ path: 'options.option' })
+      DareMe.findById(daremeId)
     ])
 
     const user: any = results[0]
     const dareme: any = results[1]
     const userWallet = user.wallet + donuts
-    const options = dareme.options
+    const voteInfo = dareme.voteInfo
 
-    let optionFuncs: Array<any> = []
-    options.forEach((option: any) => {
-      let votes: Array<any> = []
-      let isVoter = false
-      option.option.voteInfo.forEach((vote: any) => {
-        if ((vote.voter + '') === (userId + '')) {
-          isVoter = true
-          let voteTemp = vote
-          voteTemp.transfer = true
-          votes.push(voteTemp)
-        } else votes.push(vote)
-      })
-      if (isVoter) optionFuncs.push(Option.findByIdAndUpdate(option.option._id, { voteInfo: votes }))
-    })
-
-    Promise.all(optionFuncs)
+    const index = dareme.voteInfo.findIndex((vote: any) => (vote.voter + "") === (userId + ""))
+    voteInfo[index].transfer = true
 
     const transaction = new AdminUserTransaction({
       description: 7,
@@ -453,7 +439,7 @@ export const refundDonuts = async (req: Request, res: Response) => {
 
     const results1 = await Promise.all([
       transaction.save(),
-      DareMe.findByIdAndUpdate(daremeId, { wallet: dareme.wallet - donuts }),
+      DareMe.findByIdAndUpdate(daremeId, { wallet: dareme.wallet - donuts, voteInfo: voteInfo }),
       User.findByIdAndUpdate(userId, { wallet: userWallet }, { new: true })
     ])
 
@@ -484,26 +470,13 @@ export const supportRefund = async (req: Request, res: Response) => {
     const { daremeId } = req.params
     const { userId } = req.body
 
-    const dareme: any = await DareMe.findById(daremeId).populate({ path: 'options.option' })
-    const options = dareme.options
+    const dareme: any = await DareMe.findById(daremeId)
+    const voteInfo = dareme.voteInfo
 
-    let optionFuncs: Array<any> = []
-    options.forEach((option: any) => {
-      let votes: Array<any> = []
-      let isVoter = false
-      option.option.voteInfo.forEach((vote: any) => {
-        if ((vote.voter + '') === (userId + '')) {
-          isVoter = true
-          let voteTemp = vote
-          voteTemp.transfer = true
-          votes.push(voteTemp)
-        } else votes.push(vote)
-      })
-      if (isVoter) optionFuncs.push(Option.findByIdAndUpdate(option.option._id, { voteInfo: votes }))
-    })
+    const index = dareme.voteInfo.findIndex((vote: any) => (vote.voter + "") === (userId + ""))
+    voteInfo[index].transfer = true
 
-    Promise.all(optionFuncs)
-
+    await DareMe.findByIdAndUpdate(daremeId, { voteInfo: voteInfo })
     return res.status(200).json({ success: true })
   } catch (err) {
     console.log(err)
