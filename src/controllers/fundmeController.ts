@@ -120,17 +120,15 @@ export const checkFundMeFinished = async (req: Request, res: Response) => {
   }
 }
 
-export const getFundmeDetails = async (req: Request, res: Response) => {
+export const getFundMeDetails = async (req: Request, res: Response) => {
   try {
-    const { fundmeId } = req.params;
-    const fundme: any = await FundMe.findById(fundmeId).populate({ path: 'owner' })
-    if (fundme) {
-      const result = {
-        ...fundme._doc,
-        time: (new Date(fundme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * fundme.deadline + 1000 * 60) / (24 * 3600 * 1000),
-      }
-      return res.status(200).json({ success: true, fundme: result })
+    const { fundmeId } = req.params
+    const fundme: any = await FundMe.findById(fundmeId).populate([{ path: 'owner' }, { path: 'voteInfo.voter' }])
+    const result = {
+      ...fundme._doc,
+      time: Math.round((new Date(fundme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * fundme.deadline) / 1000),
     }
+    return res.status(200).json({ success: true, payload: { fundme: result } })
   } catch (err) { console.log(err) }
 }
 

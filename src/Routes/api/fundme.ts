@@ -9,7 +9,7 @@ import {
     saveFundme,
     fundCreator,
     checkFundMeFinished,
-    getFundmeDetails,
+    getFundMeDetails,
     getFundmeResult,
     deleteFundme,
     getFundmeOptions,
@@ -24,7 +24,7 @@ router.post("/save", auth, saveFundme);
 router.post('/publish', auth, publishFundme);
 router.get('/delete/:fundmeId', auth, deleteFundme);
 router.get('/check/finished/:fundmeId', checkFundMeFinished);
-router.get('/details/:fundmeId', getFundmeDetails);
+router.get('/details/:fundmeId', getFundMeDetails);
 router.get('/result/:fundmeId', getFundmeResult);
 router.post('/fund/creator', auth, fundCreator);
 // //admin
