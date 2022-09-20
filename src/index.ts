@@ -65,6 +65,7 @@ app.use(express.static("public"))
 server.listen(PORT, async () => {
   const daremes: any = await DareMe.find().populate({ path: 'options.option' })
   for (const dareme of daremes) {
+    ///----------------- VoteInfo superfan setting--------------------
     const options = dareme.options
     for (const option of options) {
       let voteInfo: Array<any> = []
