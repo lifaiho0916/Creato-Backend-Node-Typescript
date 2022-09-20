@@ -14,6 +14,105 @@ function calcTime() {
   return nd;
 }
 
+
+///// CLEAN -----------------------------
+export const fundCreator = async (req: Request, res: Response) => {
+  try {
+    const { fundmeId, amount, userId } = req.body
+    const result = await Promise.all([
+      User.findById(userId),
+      FundMe.findById(fundmeId).populate({ path: 'owner' })
+    ])
+
+    const user: any = result[0]
+    const fundme: any = result[1]
+
+    let voteInfo = fundme.voteInfo
+    let filters = voteInfo.filter((vote: any) => (vote.voter + "") === (userId + ""))
+    if (filters.length) {
+      voteInfo = voteInfo.map((vote: any) => {
+        if ((vote.voter + "") === (userId + "")) {
+          vote.donuts = vote.donuts + amount
+          if (amount >= fundme.reward) vote.superfan = true
+        }
+        return vote
+      })
+    } else voteInfo.push({
+      voter: userId,
+      donuts: amount,
+      canFree: false,
+      superfan: amount >= fundme.reward ? true : false
+    })
+
+    let fundmeWallet = fundme.wallet + amount
+    const userWallet = user.wallet - amount
+
+    const result1: any = await Promise.all([
+      FundMe.findByIdAndUpdate(fundme._id, { wallet: fundmeWallet, voteInfo: voteInfo }, { new: true }).populate([{ path: 'owner' }, { path: 'voteInfo.voter' }]),
+      User.findByIdAndUpdate(user._id, { wallet: userWallet }, { new: true })
+    ])
+    const updateFundme = result1[0]
+    const updatedUser = result1[1]
+
+    const fundmePayload = {
+      ...updateFundme._doc,
+      time: Math.round((new Date(updateFundme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * updateFundme.deadline) / 1000),
+    }
+    const payload = {
+      ...updatedUser._doc,
+      id: updatedUser._id
+    }
+
+    req.body.io.to(updatedUser.email).emit("wallet_change", updatedUser.wallet)
+
+    if (amount < updateFundme.reward) {
+      const transaction = new AdminUserTransaction({
+        description: 11,
+        from: "USER",
+        to: "FUNDME",
+        user: userId,
+        fundme: fundmeId,
+        donuts: amount,
+        date: calcTime()
+      })
+      await transaction.save()
+
+      addNewNotification(req.body.io, {
+        section: 'Ongoing FundMe',
+        trigger: 'After voter voted in FundMe (non-Superfans)',
+        fundme: updateFundme,
+        voterId: userId,
+        donuts: amount
+      })
+    } else {
+      const transaction = new AdminUserTransaction({
+        description: 5,
+        from: "USER",
+        to: "FUNDME",
+        user: userId,
+        fundme: fundmeId,
+        donuts: amount,
+        date: calcTime()
+      })
+      await transaction.save()
+
+      addNewNotification(req.body.io, {
+        section: 'Ongoing FundMe',
+        trigger: 'After voter voted in FundMe (Superfans)',
+        fundme: updateFundme,
+        voterId: userId,
+        donuts: amount
+      })
+    }
+
+    return res.status(200).json({ success: true, payload: { fundme: fundmePayload, user: payload } })
+  } catch (err) {
+    console.log(err);
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 export const getDraftFundme = (req: Request, res: Response) => {
   const { userId } = req.body;
   FundMe.findOne({ owner: userId, published: false })
@@ -130,155 +229,6 @@ export const getFundMeDetails = async (req: Request, res: Response) => {
     }
     return res.status(200).json({ success: true, payload: { fundme: result } })
   } catch (err) { console.log(err) }
-}
-
-export const fundCreator = async (req: Request, res: Response) => {
-  try {
-    const { fundmeId, amount, userId } = req.body;
-    const result = await Promise.all([
-      User.findById(userId),
-      FundMe.findById(fundmeId).populate({ path: 'owner' })
-    ]);
-
-    const user: any = result[0];
-    const fundme: any = result[1];
-
-    let voteInfo = fundme.voteInfo;
-    let filters = voteInfo.filter((vote: any) => (vote.voter + "") === (userId + ""));
-    if (filters.length) {
-      voteInfo = voteInfo.map((vote: any) => {
-        if ((vote.voter + "") === (userId + "")) {
-          if (amount !== 1) {
-            vote.donuts = vote.donuts + amount;
-            if (amount >= fundme.reward) vote.superfan = true;
-          }
-          else vote.canFree = false;
-        }
-        return vote;
-      });
-    } else voteInfo.push({
-      voter: userId,
-      donuts: amount > 1 ? amount : 0,
-      canFree: amount === 1 ? false : true,
-      superfan: amount >= fundme.reward ? true : false
-    });
-
-    let fundmeWallet = fundme.wallet + amount;
-    const updateFundme: any = await FundMe.findByIdAndUpdate(fundme._id, { wallet: fundmeWallet, voteInfo: voteInfo }, { new: true }).populate({ path: 'owner' });
-    const fundmePayload = {
-      _id: updateFundme._id,
-      owner: updateFundme.owner,
-      title: updateFundme.title,
-      deadline: updateFundme.deadline,
-      category: updateFundme.category,
-      teaser: updateFundme.teaser,
-      goal: updateFundme.goal,
-      reward: updateFundme.reward,
-      rewardText: updateFundme.rewardText,
-      wallet: updateFundme.wallet,
-      cover: updateFundme.cover,
-      sizeType: updateFundme.sizeType,
-      finished: updateFundme.finished,
-      voteInfo: updateFundme.voteInfo,
-      time: (new Date(updateFundme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * updateFundme.deadline + 1000 * 60) / (24 * 3600 * 1000),
-    }
-    if (amount < updateFundme.reward) {
-      let resUser = null
-      if (amount === 1) {
-        const adminWallet: any = await AdminWallet.findOne({ admin: "ADMIN" });
-        const adminDonuts = adminWallet.wallet - 1;
-        await AdminWallet.findOneAndUpdate({ admin: "ADMIN" }, { wallet: adminDonuts });
-        req.body.io.to("ADMIN").emit("wallet_change", adminDonuts);
-        const transaction = new AdminUserTransaction({
-          description: 3,
-          from: "ADMIN",
-          to: "FUNDME",
-          user: userId,
-          fundme: fundmeId,
-          donuts: 1,
-          date: calcTime()
-        })
-
-        await transaction.save();
-      } else {
-        const userWallet = user.wallet - amount;
-        const updatedUser: any = await User.findByIdAndUpdate(user._id, { wallet: userWallet }, { new: true });
-        const payload = {
-          id: updatedUser._id,
-          name: updatedUser.name,
-          avatar: updatedUser.avatar,
-          role: updatedUser.role,
-          email: updatedUser.email,
-          wallet: updatedUser.wallet,
-          personalisedUrl: updatedUser.personalisedUrl,
-          language: updatedUser.language,
-          category: updatedUser.categories,
-          new_notification: updatedUser.new_notification,
-        };
-        req.body.io.to(updatedUser.email).emit("wallet_change", updatedUser.wallet);
-        resUser = payload
-
-        const transaction = new AdminUserTransaction({
-          description: 11,
-          from: "USER",
-          to: "FUNDME",
-          user: userId,
-          fundme: fundmeId,
-          donuts: amount,
-          date: calcTime()
-        })
-
-        await transaction.save()
-      }
-
-      addNewNotification(req.body.io, {
-        section: 'Ongoing FundMe',
-        trigger: 'After voter voted in FundMe (non-Superfans)',
-        fundme: updateFundme,
-        voterId: userId,
-        donuts: amount
-      });
-      return res.status(200).json({ success: true, fundme: fundmePayload, user: resUser });
-    } else {
-      const userWallet = user.wallet - amount;
-      const updatedUser: any = await User.findByIdAndUpdate(user._id, { wallet: userWallet }, { new: true });
-      const payload = {
-        id: updatedUser._id,
-        name: updatedUser.name,
-        avatar: updatedUser.avatar,
-        role: updatedUser.role,
-        email: updatedUser.email,
-        wallet: updatedUser.wallet,
-        personalisedUrl: updatedUser.personalisedUrl,
-        language: updatedUser.language,
-        category: updatedUser.categories,
-        new_notification: updatedUser.new_notification,
-      };
-
-      const transaction = new AdminUserTransaction({
-        description: 5,
-        from: "USER",
-        to: "FUNDME",
-        user: userId,
-        fundme: fundmeId,
-        donuts: amount,
-        date: calcTime()
-      });
-      await transaction.save();
-      req.body.io.to(updatedUser.email).emit("wallet_change", updatedUser.wallet);
-
-      addNewNotification(req.body.io, {
-        section: 'Ongoing FundMe',
-        trigger: 'After voter voted in FundMe (Superfans)',
-        fundme: updateFundme,
-        voterId: userId,
-        donuts: amount
-      });
-      return res.status(200).json({ success: true, fundme: fundmePayload, user: payload });
-    }
-  } catch (err) {
-    console.log(err);
-  }
 }
 
 export const checkOngoingfundmes = async (io: any) => {
@@ -406,19 +356,6 @@ export const updateFundMe = async (req: Request, res: Response) => {
       sizeType: fundme.sizeType ? fundme.sizeType : resFundme.sizeType
     });
     return res.status(200).json({ success: true });
-  } catch (err) {
-    console.log(err);
-  }
-}
-
-export const getFundmeOptions = async (req: Request, res: Response) => {
-  try {
-    const { fundmeId } = req.params;
-    const fundme: any = await FundMe.findById(fundmeId)
-      .populate(
-        { path: 'voteInfo.voter', select: { '_id': 0, 'name': 1, 'avatar': 1 } }
-      );
-    return res.status(200).json({ success: true, votes: fundme.voteInfo });
   } catch (err) {
     console.log(err);
   }
