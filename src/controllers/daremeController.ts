@@ -6,7 +6,6 @@ import DareMe from "../models/DareMe"
 import User from "../models/User"
 import Option from "../models/Option"
 import Fanwall from "../models/Fanwall"
-import AdminWallet from "../models/AdminWallet"
 import AdminUserTransaction from "../models/AdminUserTransaction"
 import FundMe from "../models/FundMe"
 import { addNewNotification } from '../controllers/notificationController'
@@ -26,12 +25,7 @@ export const checkOngoingdaremes = async (io: any) => {
 
     for (const dareme of daremes) {
       if ((new Date(dareme.date).getTime() + 1000 * 3600 * 24 * dareme.deadline) < new Date(calcTime()).getTime()) { //// dareme is finished?
-
-        const daremeInfo: any = await DareMe.findByIdAndUpdate(dareme._id, { finished: true }, { new: true }).populate({ path: 'options.option' }) //// Finish DareMe
         await User.findByIdAndUpdate(dareme.owner, { tipFunction: true })
-        const options = daremeInfo.options.filter((option: any) => option.option.status === 1) // accpeted options
-        const maxOption: any = options.reduce((prev: any, current: any) => (prev.option.donuts > current.option.donuts) ? prev : current) /// top donuts options
-        const filters = options.filter((option: any) => option.option.donuts === maxOption.option.donuts) /// get count of top donuts options
 
         const refundOptions = dareme.options.filter((option: any) => option.option.status === 0)
         for (const option of refundOptions) {
@@ -51,10 +45,14 @@ export const checkOngoingdaremes = async (io: any) => {
           Promise.all([
             Option.findByIdAndUpdate(option.option._id, { status: -1 }),
             transaction.save(),
-            DareMe.findByIdAndUpdate(dareme._id, { wallet: dareme.wallet - option.option.donuts }),
+            DareMe.findByIdAndUpdate(dareme._id, { wallet: dareme.wallet - option.option.donuts, finished: true }),
             User.findByIdAndUpdate(user._id, { wallet: user.wallet + option.option.donuts })
           ])
         }
+
+        const options = dareme.options.filter((option: any) => option.option.status === 1) // accpeted options
+        const maxOption: any = options.reduce((prev: any, current: any) => (prev.option.donuts > current.option.donuts) ? prev : current) /// top donuts options
+        const filters = options.filter((option: any) => option.option.donuts === maxOption.option.donuts) /// get count of top donuts options
 
         if (filters.length === 1) { /// if more than 2 top options
 
@@ -88,7 +86,7 @@ export const checkOngoingdaremes = async (io: any) => {
           addNewNotification(io, {
             section: 'Finished DareMe',
             trigger: 'After DareMe is finished',
-            dareme: daremeInfo,
+            dareme: dareme,
             option: maxOption,
             voters: votes
           })
@@ -486,7 +484,7 @@ export const supportRefund = async (req: Request, res: Response) => {
 export const getDaremeResult = async (req: Request, res: Response) => {
   try {
     const { daremeId } = req.params;
-    const dareme: any = await DareMe.findById(daremeId).populate([{ path: 'owner' }, { path: 'options.option', populate: { path: 'writer' } }])
+    const dareme: any = await DareMe.findById(daremeId).populate([{ path: 'voteInfo.voter' }, { path: 'owner' }, { path: 'options.option', populate: { path: 'writer' } }])
     if (dareme) {
       const fanwall = await Fanwall.findOne({ dareme: dareme._id })
       const options = dareme.options.filter((option: any) => option.option.status === 1)
