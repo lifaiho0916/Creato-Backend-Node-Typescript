@@ -4,7 +4,6 @@ import User from '../models/User';
 import Tip from '../models/Tip';
 import AdminWallet from '../models/AdminWallet';
 import AdminUserTransaction from "../models/AdminUserTransaction";
-import CONSTANT from '../utils/constant';
 import { addNewNotification } from '../controllers/notificationController'
 
 function calcTime() {
@@ -15,7 +14,7 @@ function calcTime() {
 }
 
 const stripe = new Stripe(
-    CONSTANT.STRIPE_SECRET_KEY,
+    `${process.env.STRIPE_SECRET_KEY}`,
     { apiVersion: '2020-08-27', typescript: true }
 );
 

@@ -12,11 +12,12 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import voucher_codes from 'voucher-code-generator'
 import Mixpanel from "mixpanel";
-import CONSTANT from "../utils/constant";
+import 'dotenv/config'
+import CONSTANT from "../utils/constant"
 
-const mixpanel = Mixpanel.init(CONSTANT.MIXPANEL_TOKEN);
-var mixpanel_importer = Mixpanel.init(CONSTANT.MIXPANEL_TOKEN, {
-  secret: CONSTANT.MIXPANEL_API_SECRET
+const mixpanel = Mixpanel.init(`${process.env.MIXPANEL_TOKEN}`)
+var mixpanel_importer = Mixpanel.init(`${process.env.MIXPANEL_TOKEN}`, {
+  secret: `${process.env.MIXPANEL_API_SECRET}`
 });
 
 const welcomeDonuts = 10;
@@ -87,7 +88,7 @@ export const googleSignin = async (req: Request, res: Response) => {
 
           jwt.sign(
             payload,
-            CONSTANT.KEY,
+            `${process.env.KEY}`,
             { expiresIn: CONSTANT.SESSION_EXPIRE_TIME_IN_SECONDS },
             (err, token) => {
               mixpanel.people.set_once(user._id, {
@@ -195,7 +196,7 @@ export const googleSignup = async (req: Request, res: Response) => {
                   };
                   jwt.sign(
                     payload,
-                    CONSTANT.KEY,
+                    `${process.env.KEY}`,
                     { expiresIn: CONSTANT.SESSION_EXPIRE_TIME_IN_SECONDS },
                     (err, token) => {
                       mixpanel.people.set_once(updatedUser._id, {
@@ -271,7 +272,7 @@ export const appleSignin = async (req: Request, res: Response) => {
 
           jwt.sign(
             payload,
-            CONSTANT.KEY,
+            `${process.env.KEY}`,
             { expiresIn: CONSTANT.SESSION_EXPIRE_TIME_IN_SECONDS },
             (err, token) => {
               mixpanel.people.set_once(user._id, {
@@ -381,7 +382,7 @@ export const appleSignup = async (req: Request, res: Response) => {
                   };
                   jwt.sign(
                     payload,
-                    CONSTANT.KEY,
+                    `${process.env.KEY}`,
                     { expiresIn: CONSTANT.SESSION_EXPIRE_TIME_IN_SECONDS },
                     (err, token) => {
                       mixpanel.people.set_once(updatedUser._id, {
@@ -454,7 +455,7 @@ export const facebookSignin = async (req: Request, res: Response) => {
 
           jwt.sign(
             payload,
-            CONSTANT.KEY,
+            `${process.env.KEY}`,
             { expiresIn: CONSTANT.SESSION_EXPIRE_TIME_IN_SECONDS },
             (err, token) => {
               mixpanel.people.set_once(user._id, {
@@ -534,7 +535,7 @@ export const facebookSignup = async (req: Request, res: Response) => {
                   };
                   jwt.sign(
                     payload,
-                    CONSTANT.KEY,
+                    `${process.env.KEY}`,
                     { expiresIn: CONSTANT.SESSION_EXPIRE_TIME_IN_SECONDS },
                     (err, token) => {
                       mixpanel.people.set_once(updatedUser._id, {

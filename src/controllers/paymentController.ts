@@ -1,13 +1,12 @@
 import { Request, Response } from 'express'
 import Stripe from "stripe"
-import CONSTANT from "../utils/constant"
 import User from '../models/User'
 import AdminWallet from '../models/AdminWallet'
 import AdminUserTransaction from '../models/AdminUserTransaction'
 import Payment from '../models/Payment'
 
 const stripe = new Stripe(
-  CONSTANT.STRIPE_SECRET_KEY,
+  `${process.env.STRIPE_SECRET_KEY}`,
   { apiVersion: '2020-08-27', typescript: true }
 );
 

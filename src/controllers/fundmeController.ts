@@ -1,11 +1,10 @@
-import { Request, Response } from "express";
-import fs from "fs";
-import FundMe from "../models/FundMe";
-import User from "../models/User";
-import Fanwall from "../models/Fanwall";
-import AdminWallet from "../models/AdminWallet";
-import AdminUserTransaction from "../models/AdminUserTransaction";
-import { addNewNotification } from '../controllers/notificationController';
+import { Request, Response } from "express"
+import fs from "fs"
+import FundMe from "../models/FundMe"
+import User from "../models/User"
+import Fanwall from "../models/Fanwall"
+import AdminUserTransaction from "../models/AdminUserTransaction"
+import { addNewNotification } from '../controllers/notificationController'
 
 function calcTime() {
   var d = new Date();
