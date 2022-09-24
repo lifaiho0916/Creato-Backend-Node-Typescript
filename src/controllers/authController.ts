@@ -589,20 +589,22 @@ export const getAuthData = async (req: Request, res: Response) => {
 
 export const saveProfileInfo = async (req: Request, res: Response) => {
   try {
-    const { userId, name, creatoUrl, category, path } = req.body;
-    const user: any = await User.findById(userId);
-    let realPath = user.avatar;
+    const { userId, name, creatoUrl, category, path } = req.body
+    const user: any = await User.findById(userId)
+    let realPath = user.avatar
     if (path) {
-      realPath = path;
+      realPath = path
       if (user.avatar.indexOf('uploads') !== -1) {
-        const filePath = "public/" + user.avatar;
-        fs.unlink(filePath, (err) => {
-          if (err) throw err;
-        });
+        const filePath = "public/" + user.avatar
+        if (fs.existsSync(filePath)) {
+          fs.unlink(filePath, (err) => {
+            if (err) throw err
+          })
+        }
       }
     }
-    const updatedUser: any = await User.findByIdAndUpdate(userId, { name: name, personalisedUrl: creatoUrl, categories: category, avatar: realPath }, { new: true });
-    const adminDonuts: any = await AdminWallet.findOne({ admin: "ADMIN" });
+    const updatedUser: any = await User.findByIdAndUpdate(userId, { name: name, personalisedUrl: creatoUrl, categories: category, avatar: realPath }, { new: true })
+    const adminDonuts: any = await AdminWallet.findOne({ admin: "ADMIN" })
     const payload = {
       id: updatedUser._id,
       name: updatedUser.name,
@@ -615,7 +617,7 @@ export const saveProfileInfo = async (req: Request, res: Response) => {
       category: updatedUser.categories,
       new_notification: updatedUser.new_notification,
     };
-    return res.status(200).json({ user: payload, success: true });
+    return res.status(200).json({ user: payload, success: true })
   } catch (err) {
     console.log(err);
   }
@@ -789,7 +791,7 @@ export const getCreatorsByCategory = async (req: Request, res: Response) => {
     }
     if (categories.length !== 0) {
       const filterUsers = users.filter((user: any) => {
-        for(let i = 0 ; i < categories.length ; i++) if (user.categories.indexOf(categories[i]) !== -1) return true 
+        for (let i = 0; i < categories.length; i++) if (user.categories.indexOf(categories[i]) !== -1) return true
         return false
       })
       users = [...filterUsers]

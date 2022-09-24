@@ -52,7 +52,10 @@ export const checkOngoingdaremes = async (io: any) => {
         }
 
         const options = dareme.options.filter((option: any) => option.option.status === 1) // accpeted options
-        const maxOption: any = options.reduce((prev: any, current: any) => (prev.option.donuts > current.option.donuts) ? prev : current) /// top donuts options
+        const maxOption: any = options.reduce(
+          (prev: any, current: any) =>
+            (prev.option.donuts > current.option.donuts) ? prev
+              : (prev.option.donuts === current.option.donuts && prev.option.voters > current.option.voters) ? prev : current) /// top donuts options
         const filters = options.filter((option: any) => option.option.donuts === maxOption.option.donuts) /// get count of top donuts options
 
         if (filters.length === 1) { /// if more than 2 top options
