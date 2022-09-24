@@ -58,10 +58,10 @@ export const checkOngoingdaremes = async (io: any) => {
               : (prev.option.donuts === current.option.donuts && prev.option.voters > current.option.voters) ? prev : current) /// top donuts options
         const filters = options.filter((option: any) => option.option.donuts === maxOption.option.donuts) /// get count of top donuts options
 
-        if (filters.length === 1) { /// if more than 2 top options
+        if (filters.length) { /// if more than 2 top options
 
-          await Option.findByIdAndUpdate(maxOption.option._id, { win: true }) // win option
-          const noWinOptions = options.filter((option: any) => option.option.donuts < maxOption.option.donuts) /// non-win options
+          await Option.findByIdAndUpdate(filters[0].option._id, { win: true }) // win option
+          const noWinOptions = options.filter((option: any) => (option.option._id + "") < (filters[0].option._id + "")) /// non-win options
           let votes: Array<any> = []
 
           for (const option of noWinOptions) {
@@ -168,7 +168,12 @@ export const acceptDareOption = async (req: Request, res: Response) => {
     const option: any = result[1]
     let daremeVoteInfo = [...dareme.voteInfo]
     let voterFilter = dareme.voteInfo.filter((vote: any) => (vote.voter + '') === (option.writer + ''))
-    if (voterFilter.length === 0) daremeVoteInfo.push({ voter: option.writer })
+    if (voterFilter.length === 0) daremeVoteInfo.push({ voter: option.writer, superfan: true, donuts: option.requests })
+    else {
+      const foundIndex = daremeVoteInfo.findIndex((vote: any) => (vote.voter + "") === (option.writer + ""))
+      daremeVoteInfo[foundIndex].donuts += option.requests
+      if (daremeVoteInfo[foundIndex].superfan === false) daremeVoteInfo[foundIndex].superfan = option.requests >= dareme.reward ? true : false
+    }
 
     const results: any = await Promise.all([
       Option.findByIdAndUpdate(optionId, { status: 1 }, { new: true }),
@@ -269,7 +274,12 @@ export const supportCreator = async (req: Request, res: Response) => {
     let totalVoters = option.voters
     let daremeVoteInfo = [...dareme.voteInfo]
     let voterFilter = dareme.voteInfo.filter((vote: any) => (vote.voter + '') === (userId + ''))
-    if (voterFilter.length === 0) daremeVoteInfo.push({ voter: userId })
+    if (voterFilter.length === 0) daremeVoteInfo.push({ voter: userId, superfan: amount >= dareme.reward ? true : false, donuts: amount })
+    else {
+      const foundIndex = daremeVoteInfo.findIndex((vote: any) => (vote.voter + "") === (userId + ""))
+      daremeVoteInfo[foundIndex].donuts += amount
+      if (daremeVoteInfo[foundIndex].superfan === false) daremeVoteInfo[foundIndex].superfan = amount >= dareme.reward ? true : false
+    }
 
     let filters = voteInfo.filter((option: any) => (option.voter + "") === (userId + ""));
     if (filters.length) {
