@@ -56,12 +56,12 @@ export const checkOngoingdaremes = async (io: any) => {
           (prev: any, current: any) =>
             (prev.option.donuts > current.option.donuts) ? prev
               : (prev.option.donuts === current.option.donuts && prev.option.voters > current.option.voters) ? prev : current) /// top donuts options
-        const filters = options.filter((option: any) => option.option.donuts === maxOption.option.donuts) /// get count of top donuts options
+        const filters = options.filter((option: any) => option.option.donuts === maxOption.option.donuts && option.option.voters === maxOption.option.voters) /// get count of top donuts options
 
         if (filters.length) { /// if more than 2 top options
 
           await Option.findByIdAndUpdate(filters[0].option._id, { win: true }) // win option
-          const noWinOptions = options.filter((option: any) => (option.option._id + "") < (filters[0].option._id + "")) /// non-win options
+          const noWinOptions = options.filter((option: any) => (option.option._id + "") !== (filters[0].option._id + "")) /// non-win options
           let votes: Array<any> = []
 
           for (const option of noWinOptions) {
