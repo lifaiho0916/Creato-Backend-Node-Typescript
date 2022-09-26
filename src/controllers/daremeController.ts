@@ -273,7 +273,7 @@ export const supportCreator = async (req: Request, res: Response) => {
     let totalDonuts = option.donuts + amount
     let totalVoters = option.voters
     let daremeVoteInfo = [...dareme.voteInfo]
-    let voterFilter = dareme.voteInfo.filter((vote: any) => (vote.voter + '') === (userId + ''))
+    let voterFilter = daremeVoteInfo.filter((vote: any) => (vote.voter + '') === (userId + ''))
     if (voterFilter.length === 0) daremeVoteInfo.push({ voter: userId, superfan: amount >= dareme.reward ? true : false, donuts: amount })
     else {
       const foundIndex = daremeVoteInfo.findIndex((vote: any) => (vote.voter + "") === (userId + ""))
@@ -301,7 +301,7 @@ export const supportCreator = async (req: Request, res: Response) => {
     const daremeWallet = dareme.wallet + amount
 
     await Option.findByIdAndUpdate(option._id, { donuts: totalDonuts, voters: totalVoters, voteInfo: voteInfo }, { new: true }).populate({ path: 'writer' })
-    const updatedDareme: any = await DareMe.findByIdAndUpdate(daremeId, { wallet: daremeWallet, voteInfo: daremeVoteInfo }, { new: true }).populate([{ path: 'owner' }, { path: 'options.option', populate: { path: 'writer' } }])
+    const updatedDareme: any = await DareMe.findByIdAndUpdate(daremeId, { wallet: daremeWallet, voteInfo: daremeVoteInfo }, { new: true }).populate([{ path: 'voteInfo.voter' }, { path: 'owner' }, { path: 'options.option', populate: { path: 'writer' } }])
 
     let donuts = 0
     updatedDareme.options.forEach((option: any) => { if (option.option.status === 1) donuts += option.option.donuts })
