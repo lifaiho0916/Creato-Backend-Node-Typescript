@@ -39,7 +39,7 @@ export const fundCreator = async (req: Request, res: Response) => {
     } else voteInfo.push({
       voter: userId,
       donuts: amount,
-      canFree: false,
+      canFree: true,
       superfan: amount >= fundme.reward ? true : false
     })
 
