@@ -467,7 +467,7 @@ export const getFanwallsByPersonalUrl = async (req: Request, res: Response) => {
     const result: any = await Promise.all([
       DareMe.find({ owner: user._id, published: true, show: true }).populate([{ path: 'owner' }, { path: 'options.option' }]),
       FundMe.find({ owner: user._id, published: true, show: true }).populate({ path: 'owner' }),
-      Fanwall.find({ posted: true }).where('owner').ne(user._id).populate([
+      Fanwall.find({ posted: true }).where('writer').ne(user._id).populate([
         { path: 'writer' },
         { path: 'dareme', populate: [{ path: 'options.option', }, { path: 'owner' }] },
         { path: 'fundme', populate: [{ path: 'owner' }] }
@@ -618,7 +618,7 @@ export const getFanwallsByPersonalUrl = async (req: Request, res: Response) => {
         tips: resultTips,
         user: {
           ...user._doc,
-          fanwallCnt: resFanwalls.length,
+          fanwallCnt: fanwalls.length,
           itemCnt: userDaremes.length + userFundmes.length,
           superfans: voters
         }

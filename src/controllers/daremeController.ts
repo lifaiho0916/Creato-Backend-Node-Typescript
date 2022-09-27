@@ -720,7 +720,7 @@ export const getDaremesByPersonalUrl = async (req: Request, res: Response) => {
       FundMe.find({ owner: user._id, published: true, show: true }).populate({ path: 'owner' }),
       DareMe.find({ published: true, show: true, "voteInfo.voter": user._id }).where('owner').ne(user._id).populate([{ path: 'owner' }, { path: 'options.option' }]),
       FundMe.find({ published: true, show: true, "voteInfo.voter": user._id }).where('owner').ne(user._id).populate({ path: 'owner' }),
-      Fanwall.find({ writer: user._id })
+      Fanwall.find({ writer: user._id, posted: true })
     ])
 
     const daremes = result[0]
