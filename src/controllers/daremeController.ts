@@ -719,31 +719,25 @@ export const getDaremesByPersonalUrl = async (req: Request, res: Response) => {
       DareMe.find({ owner: user._id, published: true, show: true }).populate([{ path: 'owner' }, { path: 'options.option' }]),
       FundMe.find({ owner: user._id, published: true, show: true }).populate({ path: 'owner' }),
       DareMe.find({ published: true, show: true, "voteInfo.voter": user._id }).where('owner').ne(user._id).populate([{ path: 'owner' }, { path: 'options.option' }]),
-      FundMe.find({ published: true, show: true, "voteInfo.voter": user._id }).where('owner').ne(user._id).populate({ path: 'owner' })
+      FundMe.find({ published: true, show: true, "voteInfo.voter": user._id }).where('owner').ne(user._id).populate({ path: 'owner' }),
+      Fanwall.find({ writer: user._id })
     ])
 
     const daremes = result[0]
     const fundmes = result[1]
+    const fanwalls = result[4]
 
     let daremeItems = <Array<any>>[]
     let fundmeItems = <Array<any>>[]
     let ongoingItems = <Array<any>>[]
     let finishedItems = <Array<any>>[]
-    let voters = <Array<any>>[]
-    let earnings = 0
+    let voters = 0
 
     for (const dareme of daremes) {
+      const filters = dareme.voteInfo.filter((vote: any) => vote.superfan === true)
+      voters += filters.length
       let donuts = 0
-      dareme.options.forEach((option: any) => {
-        if (option.option.status === 1) {
-          donuts += option.option.donuts
-          if (dareme.finished) {
-            if (option.option.win) earnings += option.option.donuts
-            if (!option.option.win && option.option.requests) earnings += option.option.requests
-          }
-          option.option.voteInfo.forEach((vote: any) => { if (vote.superfan === true && voters.filter((voter: any) => (voter + '') === (vote.voter + '')).length === 0) voters.push(vote.voter) })
-        }
-      })
+      dareme.options.forEach((option: any) => { if (option.option.status === 1) donuts += option.option.donuts })
       let item = {
         ...dareme._doc,
         donuts: donuts,
@@ -773,8 +767,8 @@ export const getDaremesByPersonalUrl = async (req: Request, res: Response) => {
     ongoingItems = []
     finishedItems = []
     for (const fundme of fundmes) {
-      if (fundme.finished) earnings += fundme.wallet
-      fundme.voteInfo.forEach((vote: any) => { if (vote.superfan === true && voters.filter((voter: any) => (voter + '') === (vote.voter + '')).length === 0) voters.push(vote.voter) })
+      const filters = fundme.voteInfo.filter((vote: any) => vote.superfan === true)
+      voters += filters.length
       let item = {
         ...fundme._doc,
         donuts: fundme.wallet,
@@ -870,9 +864,12 @@ export const getDaremesByPersonalUrl = async (req: Request, res: Response) => {
       payload: {
         daremes: daremeItems,
         fundmes: fundmeItems,
-        user: user,
-        voterCount: voters.length,
-        earnings: earnings * 0.9
+        user: {
+          ...user._doc,
+          superfans: voters,
+          itemCnt: daremes.length + fundmes.length,
+          fanwallCnt: fanwalls.length
+        }
       }
     })
   } catch (err) { console.log(err) }

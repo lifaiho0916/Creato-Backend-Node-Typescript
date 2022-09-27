@@ -480,25 +480,12 @@ export const getFanwallsByPersonalUrl = async (req: Request, res: Response) => {
       Tip.find({ user: user._id, show: true }).populate({ path: 'tipper' })
     ])
 
-    let voters = <Array<any>>[]
-    let earnings = 0
+    let voters = 0
     const userDaremes = result[0]
     const userFundmes = result[1]
 
-    userDaremes.filter((userDareme: any) => userDareme.finished === true).forEach((dareme: any) => {
-      dareme.options.forEach((option: any) => {
-        if (option.option.status === 1) {
-          if (option.option.win) earnings += option.option.donuts
-          if (!option.option.win && option.option.requests) earnings += option.option.requests
-          option.option.voteInfo.forEach((vote: any) => { if (vote.superfan === true && voters.filter((voter: any) => (voter + '') === (vote.voter + '')).length === 0) voters.push(vote.voter) })
-        }
-      })
-    })
-
-    userFundmes.filter((userFundme: any) => userFundme.finished === true).forEach((fundme: any) => {
-      earnings = earnings + fundme.wallet
-      fundme.voteInfo.forEach((vote: any) => { if (vote.superfan === true && voters.filter((voter: any) => (voter + '') === (vote.voter + '')).length === 0) voters.push(vote.voter) })
-    })
+    userDaremes.forEach((dareme: any) => { voters += dareme.voteInfo.filter((vote: any) => vote.superfan === true).length })
+    userFundmes.forEach((fundme: any) => { voters += fundme.voteInfo.filter((vote: any) => vote.superfan === true).length })
 
     const rewardFanwalls = result[2]
 
@@ -624,7 +611,19 @@ export const getFanwallsByPersonalUrl = async (req: Request, res: Response) => {
       return first.tip < second.tip ? 1 : first.tip > second.tip ? -1 :
         first.date > second.date ? -1 : first.date < second.date ? 1 : 0;
     });
-    return res.status(200).json({ success: true, fanwalls: resFanwalls, tips: resultTips, user: user, voterCount: voters.length, earnings: earnings * 0.9 });
+    return res.status(200).json({
+      success: true,
+      payload: {
+        fanwalls: resFanwalls,
+        tips: resultTips,
+        user: {
+          ...user._doc,
+          fanwallCnt: resFanwalls.length,
+          itemCnt: userDaremes.length + userFundmes.length,
+          superfans: voters
+        }
+      }
+    });
   } catch (err) {
     console.log(err);
   }
