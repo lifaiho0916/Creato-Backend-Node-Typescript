@@ -252,6 +252,7 @@ export const getFundmeResult = async (req: Request, res: Response) => {
       const fanwall: any = await Fanwall.findOne({ fundme: fundme._id })
       const result = {
         ...fundme._doc,
+        fanwall: fanwall,
         time: Math.round((new Date(fundme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * fundme.deadline) / 1000),
       }
       return res.status(200).json({ success: true, fundme: result, fanwall: fanwall })

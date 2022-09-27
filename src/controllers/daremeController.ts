@@ -508,6 +508,7 @@ export const getDaremeResult = async (req: Request, res: Response) => {
       const result = {
         ...dareme._doc,
         donuts: donuts,
+        fanwall: fanwall,
         time: Math.round((new Date(dareme.date).getTime() - new Date(calcTime()).getTime() + 24 * 1000 * 3600 * dareme.deadline) / 1000),
       }
       return res.status(200).json({ success: true, payload: { dareme: result, fanwall: fanwall } })
