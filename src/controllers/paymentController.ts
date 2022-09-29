@@ -87,12 +87,13 @@ export const buyDonuts = async (req: Request, res: Response) => {
     const user: any = await User.findById(userId);
     let amount = item.donutCount / 10 * (100 - item.discountedPercent) / 100 * 100;
     amount += amount * 0.034 + 30;
+    amount = amount * item.rate
 
     let customer = null;
     if (stripeId) {
       await stripe.charges.create({
         amount: Number(Math.round(amount)),
-        currency: 'usd',
+        currency: item.currency,
         customer: stripeId,
         description: `Property: ${item.property}, DonutCount: ${item.donutCount}, DiscountedPercent: ${item.discountedPercent}`,
       }).then(result => {
@@ -111,7 +112,7 @@ export const buyDonuts = async (req: Request, res: Response) => {
       if (customer) {
         await stripe.charges.create({
           amount: Number(Math.round(amount)),
-          currency: 'usd',
+          currency: item.currency,
           customer: customer.id,
           description: `Property: ${item.property}, DonutCount: ${item.donutCount}, DiscountedPercent: ${item.discountedPercent}`,
         }).then(result => {
@@ -120,7 +121,7 @@ export const buyDonuts = async (req: Request, res: Response) => {
       } else {
         await stripe.charges.create({
           amount: Number(Math.round(amount)),
-          currency: 'usd',
+          currency: item.currency,
           source: token.id,
           description: `Property: ${item.property}, DonutCount: ${item.donutCount}, DiscountedPercent: ${item.discountedPercent}`,
         }).then(result => {
@@ -177,19 +178,19 @@ export const buyDonuts = async (req: Request, res: Response) => {
 
 export const getStripeID = async (req: Request, res: Response) => {
   try {
-    const { userId } = req.body;
-    const user: any = await User.findById(userId);
-    let cardNum = null;
+    const { userId } = req.body
+    const user: any = await User.findById(userId)
+    let cardNum = null
     if (user.stripeID) {
-      const customer: any = await stripe.customers.retrieve(user.stripeID);
+      const customer: any = await stripe.customers.retrieve(user.stripeID)
       if (customer) {
-        const card: any = await stripe.customers.retrieveSource(user.stripeID, customer?.default_source);
-        cardNum = card?.last4;
+        const card: any = await stripe.customers.retrieveSource(user.stripeID, customer?.default_source)
+        cardNum = card?.last4
       }
     }
-    return res.status(200).json({ success: true, stripeID: user.stripeID ? user.stripeID : null, cardNum: cardNum });
+    return res.status(200).json({ success: true, stripeID: user.stripeID ? user.stripeID : null, cardNum: cardNum })
   } catch (err) {
-    console.log(err);
+    console.log(err)
   }
 }
 
