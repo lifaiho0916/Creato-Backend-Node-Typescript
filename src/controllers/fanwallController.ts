@@ -225,7 +225,7 @@ export const saveFanwall = async (req: Request, res: Response) => {
       }
 
       if (posted) {
-        const fundme: any = await FundMe.findById(itemId).populate({ path: 'writer' });
+        const fundme: any = await FundMe.findById(itemId).populate({ path: 'owner' });
         if (fundme && fundme.empty === false) {
           const result = await Promise.all([
             User.findById(fundme.owner),
