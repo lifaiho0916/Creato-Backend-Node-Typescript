@@ -255,82 +255,12 @@ export const getPostDetail = async (req: Request, res: Response) => {
         { path: 'dareme', populate: [{ path: 'voteInfo.voter' }, { path: 'owner' }, { path: 'options.option', populate: { path: 'writer' } }] },
         { path: 'fundme', populate: [{ path: 'owner' }, { path: 'voteInfo.voter' }] }
       ])
-    if (fanwall.dareme) {
-      const winOption = fanwall.dareme.options.filter((option: any) => option.option.win === true)[0].option;
-      const option: any = await Option.findById(winOption._id).populate({ path: 'writer', select: { 'name': 1 } }); // This is winoption object
-
-      const dareme: any = await DareMe.findById(fanwall.dareme._id)
-        .populate({
-          path: "options.option",
-          model: Option,
-          populate: {
-            path: 'voteInfo.voter',
-            model: User
-          }
-        });
-
-      const options = dareme.options;
-
-      let voteInfo: {
-        id: any,
-        name: string,
-        donuts: number,
-        date: Date,
-        avatar: string,
-        superfan: boolean,
-        personalisedUrl: string
-      }[] = [];
-
-      options.forEach((option: any) => {
-        option.option.voteInfo.forEach((vote: any) => {
-          let filters = voteInfo.filter((voteinfo: any) => (voteinfo.id + "" === vote.voter._id + ""));
-          if (filters.length) {
-            let foundIndex = voteInfo.findIndex(voteIn => (voteIn.id + "" === filters[0].id + ""));
-            let item = {
-              id: filters[0].id,
-              donuts: filters[0].donuts + vote.donuts,
-              name: vote.voter.name,
-              avatar: vote.voter.avatar,
-              superfan: vote.superfan,
-              date: filters[0].date > vote.date ? vote.date : filters[0].date,
-              personalisedUrl: vote.voter.personalisedUrl
-            };
-            voteInfo[foundIndex] = item;
-          } else {
-            voteInfo.push({
-              id: vote.voter._id,
-              donuts: vote.donuts,
-              name: vote.voter.name,
-              avatar: vote.voter.avatar,
-              superfan: vote.superfan,
-              date: vote.date,
-              personalisedUrl: vote.voter.personalisedUrl
-            });
-          }
-        });
-      });
-
-      voteInfo.sort((first: any, second: any) => {
-        return first.donuts < second.donuts ? 1 : first.donuts > second.donuts ? -1 :
-          first.date > second.date ? 1 : first.date < second.date ? -1 : 0;
-      });
-
-      return res.status(200).json({
-        success: true,
-        payload: {
-          fanwall: fanwall,
-          winOption: option,
-          topFuns: voteInfo.slice(0, 3),
-        }
-      })
-    } else {
-      return res.status(200).json({
-        success: true,
-        payload: {
-          fanwall: fanwall
-        }
-      })
-    }
+    return res.status(200).json({
+      success: true,
+      payload: {
+        fanwall: fanwall
+      }
+    })
   } catch (err) {
     console.log(err);
   }
