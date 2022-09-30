@@ -85,190 +85,100 @@ export const getFanwallList = async (req: Request, res: Response) => {
 export const saveFanwall = async (req: Request, res: Response) => {
   try {
     const { fanwallId, itemId, video, message, posted, embedUrl, cover, sizeType, type } = req.body
-    if (type === 'dareme') {
-      const dareme: any = await DareMe.findById(itemId)
-      if (fanwallId) {
-        const fanwall: any = await Fanwall.findById(fanwallId);
-        if (fanwall.video && fanwall.video !== video) {
-          const filePath = "public/" + fanwall.video;
-          if (fs.existsSync(filePath)) {
-            fs.unlink(filePath, (err) => {
-              if (err) throw err;
-            });
-          }
-        }
-        if (fanwall.cover && fanwall.cover !== cover) {
-          const filePath = "public/" + fanwall.cover;
-          if (fs.existsSync(filePath)) {
-            fs.unlink(filePath, (err) => {
-              if (err) throw err;
-            });
-          }
-        }
+    const item: any = type === 'DareMe' ? await DareMe.findById(itemId) : await FundMe.findById(itemId)
 
-        await Fanwall.findByIdAndUpdate(fanwallId, {
-          writer: dareme.owner,
-          dareme: itemId,
-          video: video,
-          sizeType: sizeType,
-          cover: cover,
-          message: message,
-          embedUrl: embedUrl,
-          posted: posted,
-          date: calcTime()
-        })
-      } else {
-        const newFanwall = new Fanwall({
-          writer: dareme.owner,
-          dareme: itemId,
-          video: video,
-          sizeType: sizeType,
-          cover: cover,
-          message: message,
-          embedUrl: embedUrl,
-          posted: posted,
-          date: calcTime()
-        });
-        await newFanwall.save();
+    if (fanwallId) {
+      const fanwall: any = await Fanwall.findById(fanwallId);
+      if (fanwall.video && fanwall.video !== video) {
+        const filePath = "public/" + fanwall.video
+        if (fs.existsSync(filePath)) {
+          fs.unlink(filePath, (err) => {
+            if (err) throw err
+          })
+        }
+      }
+      if (fanwall.cover && fanwall.cover !== cover) {
+        const filePath = "public/" + fanwall.cover
+        if (fs.existsSync(filePath)) {
+          fs.unlink(filePath, (err) => {
+            if (err) throw err
+          })
+        }
       }
 
-      if (posted) {
-        const dareme = await DareMe.findById(itemId);
-        if (dareme && dareme.wallet > 0) {
-          const result = await Promise.all([
-            User.findById(dareme.owner),
-            AdminWallet.findOne({ admin: "ADMIN" })
-          ])
+      await Fanwall.findByIdAndUpdate(fanwallId, {
+        writer: item.owner,
+        dareme: type === 'DareMe' ? itemId : null,
+        fundme: type === 'FundMe' ? itemId : null,
+        video: video,
+        sizeType: sizeType,
+        cover: cover,
+        message: message,
+        embedUrl: embedUrl,
+        posted: posted,
+        date: calcTime()
+      })
+    } else {
+      const newFanwall = new Fanwall({
+        writer: item.owner,
+        dareme: type === 'DareMe' ? itemId : null,
+        fundme: type === 'FundMe' ? itemId : null,
+        video: video,
+        sizeType: sizeType,
+        cover: cover,
+        message: message,
+        embedUrl: embedUrl,
+        posted: posted,
+        date: calcTime()
+      })
+      await newFanwall.save()
+    }
 
-          const user: any = result[0]
-          const adminWallet: any = result[1]
+    if (posted) {
+      if ((type === 'DareMe' && item.wallet > 0) || (type === "FundMe" && item.empty === false)) {
+        const result = await Promise.all([
+          User.findById(item.owner),
+          AdminWallet.findOne({ admin: "ADMIN" })
+        ])
 
-          req.body.io.to(user.email).emit("wallet_change", user.wallet + dareme.wallet * 0.9)
-          req.body.io.to("ADMIN").emit("wallet_change", adminWallet.wallet + dareme.wallet * 0.1)
+        const user: any = result[0]
+        const adminWallet: any = result[1]
+
+        if (item.wallet > 0) {
+          req.body.io.to(user.email).emit("wallet_change", user.wallet + item.wallet * 0.9)
+          req.body.io.to("ADMIN").emit("wallet_change", adminWallet.wallet + item.wallet * 0.1)
 
           const transactionAdmin = new AdminUserTransaction({
             description: 4,
-            from: "DAREME",
+            from: type === 'DareMe' ? "DAREME" : 'FUNDME',
             to: "ADMIN",
-            dareme: dareme._id,
-            user: dareme.owner,
-            donuts: dareme.wallet * 0.1,
+            dareme: item._id,
+            user: item.owner,
+            donuts: item.wallet * 0.1,
             date: calcTime()
           });
 
           const transactionUser = new AdminUserTransaction({
             description: 4,
-            from: "DAREME",
+            from: type === 'DareMe' ? "DAREME" : 'FUNDME',
             to: "USER",
-            user: dareme.owner,
-            dareme: dareme._id,
-            donuts: dareme.wallet * 0.9,
+            user: item.owner,
+            dareme: item._id,
+            donuts: item.wallet * 0.9,
             date: calcTime()
           })
 
           await Promise.all([
-            User.findByIdAndUpdate(dareme.owner, { wallet: user.wallet + dareme.wallet * 0.9 }),
-            AdminWallet.findOneAndUpdate({ admin: "ADMIN" }, { wallet: adminWallet.wallet + dareme.wallet * 0.1 }),
             transactionAdmin.save(),
             transactionUser.save(),
-            DareMe.findByIdAndUpdate(itemId, { wallet: 0 })
+            type === 'DareMe' ? DareMe.findByIdAndUpdate(itemId, { wallet: 0 }) : FundMe.findByIdAndUpdate(itemId, { empty: true }),
+            AdminWallet.findOneAndUpdate({ admin: "ADMIN" }, { wallet: adminWallet.wallet + item.wallet * 0.1 }),
+            User.findByIdAndUpdate(item.owner, { wallet: user.wallet + item.wallet * 0.9 }),
           ])
         }
       }
-      return res.status(200).json({ success: true })
-
-    } else if (type === 'fundme') {
-      const fundme: any = await FundMe.findById(itemId)
-      if (fanwallId) {
-        const fanwall: any = await Fanwall.findById(fanwallId);
-        if (fanwall.video && fanwall.video !== video) {
-          const filePath = "public/" + fanwall.video;
-          if (fs.existsSync(filePath)) {
-            fs.unlink(filePath, (err) => {
-              if (err) throw err;
-            });
-          }
-        }
-        if (fanwall.cover && fanwall.cover !== cover) {
-          const filePath = "public/" + fanwall.cover;
-          if (fs.existsSync(filePath)) {
-            fs.unlink(filePath, (err) => {
-              if (err) throw err;
-            });
-          }
-        }
-
-        await Fanwall.findByIdAndUpdate(fanwallId, {
-          writer: fundme.owner,
-          fundme: itemId,
-          video: video,
-          sizeType: sizeType,
-          cover: cover,
-          message: message,
-          embedUrl: embedUrl,
-          posted: posted,
-          date: new Date(calcTime()).getTime()
-        })
-      } else {
-        const newFanwall = new Fanwall({
-          writer: fundme.owner,
-          fundme: itemId,
-          video: video,
-          sizeType: sizeType,
-          cover: cover,
-          message: message,
-          embedUrl: embedUrl,
-          posted: posted,
-          date: new Date(calcTime()).getTime()
-        });
-        await newFanwall.save();
-      }
-
-      if (posted) {
-        const fundme: any = await FundMe.findById(itemId).populate({ path: 'owner' });
-        if (fundme && fundme.empty === false) {
-          const result = await Promise.all([
-            User.findById(fundme.owner),
-            AdminWallet.findOne({ admin: "ADMIN" })
-          ])
-
-          const user: any = result[0]
-          const adminWallet: any = result[1]
-
-          req.body.io.to(user.email).emit("wallet_change", user.wallet + fundme.wallet * 0.9);
-          req.body.io.to("ADMIN").emit("wallet_change", adminWallet.wallet + fundme.wallet * 0.1);
-
-          const transactionAdmin = new AdminUserTransaction({
-            description: 4,
-            from: "FUNDME",
-            to: "ADMIN",
-            fundme: fundme._id,
-            donuts: fundme.wallet * 0.1,
-            date: calcTime()
-          })
-
-          const transactionUser = new AdminUserTransaction({
-            description: 4,
-            from: "FUNDME",
-            to: "USER",
-            user: fundme.owner,
-            fundme: fundme._id,
-            donuts: fundme.wallet * 0.9,
-            date: calcTime()
-          })
-
-          await Promise.all([
-            User.findByIdAndUpdate(fundme.owner, { wallet: user.wallet + fundme.wallet * 0.9 }),
-            AdminWallet.findOneAndUpdate({ admin: "ADMIN" }, { wallet: adminWallet.wallet + fundme.wallet * 0.1 }),
-            FundMe.findByIdAndUpdate(itemId, { empty: true }),
-            transactionAdmin.save(),
-            transactionUser.save()
-          ])
-        }
-      }
-      return res.status(200).json({ success: true })
     }
-
+    return res.status(200).json({ success: true })
   } catch (err) {
     console.log(err);
   }
@@ -296,26 +206,43 @@ export const uploadFile = (req: Request, res: Response) => {
 export const fanwallGetByDareMeId = async (req: Request, res: Response) => {
   try {
     const { daremeId } = req.params;
-    const dareme = await DareMe.findById(daremeId)
-      .populate({ path: 'owner', select: { 'avatar': 1, 'name': 1, 'personalisedUrl': 1 } })
-      .populate({ path: 'options.option', select: { 'title': 1, 'win': 1 } })
-      .select({ 'teaser': 1, 'cover': 1, 'sizeType': 1, 'options': 1 });
-    const fanwall = await Fanwall.findOne({ dareme: daremeId });
-    return res.status(200).json({ success: true, dareme: dareme, fanwall: fanwall });
+    const dareme = await DareMe.findById(daremeId).populate([{ path: 'voteInfo.voter' }, { path: 'owner' }, { path: 'options.option', populate: { path: 'writer' } }])
+    const fanwall = await Fanwall.findOne({ dareme: daremeId })
+      .populate([
+        { path: 'writer' },
+        { path: 'dareme', populate: [{ path: 'voteInfo.voter' }, { path: 'owner' }, { path: 'options.option', populate: { path: 'writer' } }] },
+        { path: 'fundme', populate: [{ path: 'owner' }, { path: 'voteInfo.voter' }] }
+      ])
+    return res.status(200).json({
+      success: true,
+      payload: {
+        dareme: dareme,
+        fanwall: fanwall
+      }
+    })
   } catch (err) {
-    console.log(err);
+    console.log(err)
   }
 }
 
 export const fanwallGetByFundMeId = async (req: Request, res: Response) => {
   try {
-    const { fundmeId } = req.params;
-    const fundme = await FundMe.findById(fundmeId)
-      .populate([{ path: 'owner', select: { 'avatar': 1, 'name': 1, 'personalisedUrl': 1 } }, { path: 'voteInfo.voter', select: { '_id': 0, 'name': 1, 'avatar': 1 } }]);
-    const fanwall = await Fanwall.findOne({ fundme: fundmeId });
-    return res.status(200).json({ success: true, fundme: fundme, fanwall: fanwall });
+    const { fundmeId } = req.params
+    const fundme = await FundMe.findById(fundmeId).populate([{ path: 'owner' }, { path: 'voteInfo.voter' }])
+    const fanwall = await Fanwall.findOne({ fundme: fundmeId })
+      .populate([
+        { path: 'writer' },
+        { path: 'dareme', populate: [{ path: 'voteInfo.voter' }, { path: 'owner' }, { path: 'options.option', populate: { path: 'writer' } }] },
+        { path: 'fundme', populate: [{ path: 'owner' }, { path: 'voteInfo.voter' }] }
+      ])
+    return res.status(200).json({
+      success: true,
+      payload: {
+        fundme: fundme, fanwall: fanwall
+      }
+    })
   } catch (err) {
-    console.log(err);
+    console.log(err)
   }
 }
 
@@ -323,33 +250,11 @@ export const getPostDetail = async (req: Request, res: Response) => {
   try {
     const { fanwallId } = req.params;
     const fanwall: any = await Fanwall.findById(fanwallId)
-      .populate({ path: 'writer', select: { 'avatar': 1, 'name': 1, 'personalisedUrl': 1 } })
       .populate([
-        {
-          path: 'dareme',
-          model: DareMe,
-          populate: [
-            {
-              path: 'options.option',
-              model: Option
-            },
-            {
-              path: 'owner',
-              model: User
-            }
-          ]
-        },
-        {
-          path: 'fundme',
-          model: FundMe,
-          populate: [
-            {
-              path: 'owner',
-              model: User
-            }
-          ]
-        }
-      ]);
+        { path: 'writer' },
+        { path: 'dareme', populate: [{ path: 'voteInfo.voter' }, { path: 'owner' }, { path: 'options.option', populate: { path: 'writer' } }] },
+        { path: 'fundme', populate: [{ path: 'owner' }, { path: 'voteInfo.voter' }] }
+      ])
     if (fanwall.dareme) {
       const winOption = fanwall.dareme.options.filter((option: any) => option.option.win === true)[0].option;
       const option: any = await Option.findById(winOption._id).populate({ path: 'writer', select: { 'name': 1 } }); // This is winoption object
@@ -412,45 +317,18 @@ export const getPostDetail = async (req: Request, res: Response) => {
 
       return res.status(200).json({
         success: true,
-        fanwall: fanwall,
-        winOption: option,
-        topFuns: voteInfo.slice(0, 3),
-      });
+        payload: {
+          fanwall: fanwall,
+          winOption: option,
+          topFuns: voteInfo.slice(0, 3),
+        }
+      })
     } else {
-      let voteInfo: {
-        id: any,
-        name: string,
-        donuts: number,
-        date: Date,
-        avatar: string,
-        superfan: boolean,
-        personalisedUrl: string
-      }[] = [];
-
-      const fundme: any = await FundMe.findById(fanwall.fundme._id)
-        .populate({
-          path: 'voteInfo.voter',
-          model: User
-        });
-
-      fundme.voteInfo.forEach((vote: any) => {
-        voteInfo.push({
-          id: vote.voter._id,
-          donuts: vote.donuts + vote.canFree ? 0 : 1,
-          name: vote.voter.name,
-          avatar: vote.voter.avatar,
-          date: vote.date,
-          superfan: vote.superfan,
-          personalisedUrl: vote.voter.personalisedUrl
-        });
-      });
-
-      voteInfo.sort((first: any, second: any) => { return first.donuts < second.donuts ? 1 : first.donuts > second.donuts ? -1 : 0 });
-
       return res.status(200).json({
         success: true,
-        fanwall: fanwall,
-        topFuns: voteInfo.slice(0, 3),
+        payload: {
+          fanwall: fanwall
+        }
       })
     }
   } catch (err) {

@@ -879,7 +879,11 @@ export const getDaremesOngoing = async (req: Request, res: Response) => {
   try {
     const daremeFunc: any = DareMe.find({ published: true, show: true }).populate([{ path: 'owner' }, { path: 'options.option' }])
     const fundmeFunc: any = FundMe.find({ published: true, show: true }).populate({ path: 'owner' })
-    const fanwallFunc: any = Fanwall.find({ posted: true }).populate([{ path: 'writer' }, { path: 'dareme', populate: { path: 'options.option' } }, { path: 'fundme' }])
+    const fanwallFunc: any = Fanwall.find({ posted: true }).populate([
+      { path: 'writer' },
+      { path: 'dareme', populate: { path: 'options.option' } },
+      { path: 'fundme' }
+    ])
     const finishedDareme = DareMe.find({ finished: true }).populate({ path: 'owner' })
     const finishedFundme = FundMe.find({ finished: true }).populate({ path: 'owner' })
 
@@ -981,7 +985,10 @@ export const getDaremesOngoing = async (req: Request, res: Response) => {
         resFanwalls.push({
           ...fanwall._doc,
           fundme: null,
-          item: { ...fanwall.fundme._doc }
+          item: { 
+            ...fanwall.fundme._doc,
+            donuts: fanwall.fundme.wallet
+          }
         })
       }
     })
